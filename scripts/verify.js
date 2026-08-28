@@ -157,7 +157,10 @@ for (const f of assetFiles) {
 }
 log(`  JS próprio: ${fmtBytes(jsBytes)} | vendor: ${fmtBytes(vendorBytes)} | CSS: ${fmtBytes(cssBytes)} | imagens: ${fmtBytes(imgBytes)}`);
 if (jsBytes > 20 * 1024) H(`JS próprio acima de 20KB (${fmtBytes(jsBytes)})`);
-if (vendorBytes > 60 * 1024) H(`libs vendor acima de 60KB (${fmtBytes(vendorBytes)}) — cortar Lenis?`);
+// libs vendor: limite em bytes crus (~200KB cru ≈ ~60KB gzip). GSAP+ScrollTrigger+Lenis
+// juntos ficam por volta de 125KB crus (~38KB gzip) e são a stack padrão do modo CINEMATIC.
+if (vendorBytes > 200 * 1024) H(`libs vendor acima de ~200KB crus (${fmtBytes(vendorBytes)}) — revise o que está vendorizado (cortar Lenis, usar só o core do GSAP)`);
+else if (vendorBytes > 0) M(`libs vendor: ${fmtBytes(vendorBytes)} crus (≈ ${fmtBytes(Math.round(vendorBytes * 0.32))} gzip estimado)`);
 if (biggest) M(`maior asset: ${path.relative(root, biggest.f)} (${fmtBytes(biggest.s)})`);
 
 // ---------------- compliance ----------------
@@ -189,7 +192,7 @@ if (pf.length) H(`possível violação de "atributos pessoais" (Meta): ${pf.join
 
 // blocos exigidos em nicho sensível
 const sensitive = brief && (brief.compliance?.sensitiveNiche ||
-  (brief.compliance?.categories || []).length > 0);
+  (brief.compliance?.categories || []).some(c => c && c !== 'other'));
 if (sensitive) {
   const htmlN = deaccent(html); // checagens de compliance são tolerantes a acento
   const need = [

@@ -85,7 +85,7 @@ if (absRefs.length) {
 // -------- injeção de compliance --------
 head('Compliance');
 const sensitive = brief && (brief.compliance?.sensitiveNiche || (brief.compliance?.categories || []).length);
-if (!html.includes('<!-- FORGE:ANALYTICS -->')) {
+if (!html.includes('FORGE:ANALYTICS')) {
   html = html.replace(/<\/head>/i,
     `  <!-- FORGE:ANALYTICS — cole aqui GA4 / Meta Pixel / GTM. Instruções no README-PUBLICAR.md -->\n</head>`);
 }
