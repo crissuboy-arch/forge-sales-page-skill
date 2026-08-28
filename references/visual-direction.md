@@ -3,6 +3,14 @@
 Fase 4 do fluxo. Cria a cara da página **do zero para este produto**. Salvar em
 `output/<slug>/style.md` + os tokens no CSS.
 
+> **Complementos na camada `scroll-experience/`:** `art-direction-plus.md` traz os
+> **pisos numéricos** (medida 45–75ch, line‑height display 0.94–1.06, 6 papéis de
+> cor + 1 acento, 5 ferramentas de profundidade, grão 4–5%, ease‑out
+> `cubic-bezier(.23,1,.32,1)`, entrada de `scale(.95)`) e o **método do preâmbulo
+> de estilo** para imagem gerada. `anti-ai.md` traz a lista de proibições
+> anti‑template / anti‑"cara de IA" (traps de paleta, gradient text, glow, glass
+> decorativo, grid de cards como estrutura, …) e o **squint test**.
+
 > Regra absoluta: nenhum produto reutiliza a identidade de outro. Se a skill já
 > gerou 3 páginas, a quarta não pode parecer nenhuma delas. Templates NÃO têm
 > identidade visual — só estrutura.

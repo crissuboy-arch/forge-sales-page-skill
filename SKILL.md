@@ -69,10 +69,14 @@ aplicações com backend/estado de usuário. (A skill gera front-end estático.)
 ```
 [1] COLETA        → reunir dados do produto (seção 3)
 [2] ANÁLISE       → avatar, oferta, mecanismo, objeções, consciência, tráfego
-[3] ARQUITETURA   → escolher formato + estrutura de seções (seção 5)
-[4] DIREÇÃO       → escolher modo visual + criar identidade única (seção 6)
-[5] COPY          → escrever todos os blocos de texto (references/copywriting.md)
+[3] ARQUITETURA   → formato + estrutura de seções (seção 5)
+                    + nível de scroll + gramática de página + fingerprint gate
+[4] DIREÇÃO       → modo visual + identidade única (seção 6)
+                    + taste floor + anti-IA + (se houver imagem gerada) preâmbulo de estilo
+[5] COPY          → todos os blocos de texto (references/copywriting.md)
+                    + curva de sentimento e o pico único
 [6] BUILD         → montar HTML/CSS/JS, rodar scripts/, validar (seção 8)
+                    + feel check + squint test + scroll-qa
 [7] EXPORT        → gerar dist/ + README-PUBLICAR.md + pagina.zip (seção 10)
 ```
 
@@ -84,16 +88,29 @@ decisão, checklists e exemplos.
 |------|-----------|
 | Análise de oferta/mecanismo/consciência | `references/offer-analysis.md` |
 | Escolha de arquitetura | `references/sales-architecture.md` |
+| **Nível de scroll (STATIC LIGHT / MOTION / CINEMATIC / STORYTELLING)** | `scroll-experience/mode-decision.md` |
+| **Gramática de página (variedade estrutural)** | `scroll-experience/scroll-grammars.md` |
+| **Fingerprint gate (anti-repetição entre projetos)** | `scroll-experience/fingerprint-gate.md` |
 | Presell | `references/presell.md` |
 | Advertorial | `references/advertorial.md` |
 | Páginas de afiliado | `references/affiliate-pages.md` |
 | Copy | `references/copywriting.md` |
+| **Curva de sentimento + pico único** | `scroll-experience/feeling-curve.md` |
 | Direção visual | `references/visual-direction.md` |
-| Motion / scroll / GSAP | `references/cinematic-motion.md` |
+| **Taste floor + preâmbulo de estilo** | `scroll-experience/art-direction-plus.md` |
+| **Anti-template / anti-"cara de IA"** | `scroll-experience/anti-ai.md` |
+| Motion / scroll / GSAP (stack, orçamento, fallback) | `references/cinematic-motion.md` |
+| **Devices de scroll + janelas de cue** | `scroll-experience/motion-system.md` |
 | Checkout | `references/checkout-integrations.md` |
 | Compliance Google | `references/compliance-google.md` |
 | Compliance Meta | `references/compliance-meta.md` |
 | QA final | `references/qa-checklist.md` |
+| **QA visual de scroll (feel check + harness headless)** | `scroll-experience/visual-qa.md` |
+
+> A camada **`scroll-experience/`** destila os princípios úteis de scroll‑storytelling
+> e direção de arte premium (ref.: ScrollCraft) em regras operacionais da skill.
+> Não é engine — a stack de motion continua sendo a de `cinematic-motion.md`.
+> Ver `scroll-experience/README.md`.
 
 ---
 
@@ -201,12 +218,31 @@ O advertorial e a presell reorganizam isso — ver seus arquivos.
 
 ---
 
-## 6. Como escolher o visual (3 modos)
+## 6. Como escolher o visual (3 modos técnicos × 4 níveis de scroll)
 
-A skill tem **3 modos visuais**. O modo define a stack técnica e o teto de
-"produção"; a **direção de arte é sempre única por produto** (paleta, tipografia,
-formas, fotografia, tom). Detalhe em `references/visual-direction.md` e
-`references/cinematic-motion.md`.
+A skill tem **3 modos visuais** (stack técnica) e, ortogonal a eles, **4 níveis
+de intensidade de scroll**. O modo define a stack e o teto de "produção"; a
+**direção de arte é sempre única por produto**. Detalhe em
+`references/visual-direction.md`, `references/cinematic-motion.md` e
+`scroll-experience/`.
+
+### Níveis de scroll (`scroll-experience/mode-decision.md`)
+
+| Nível | O que é | Stack técnica |
+|---|---|---|
+| **STATIC LIGHT** | reveal-on-enter por CSS/IntersectionObserver, sem GSAP | PREMIUM STATIC |
+| **MOTION** | GSAP: reveals + stagger + 1 parallax discreto | CINEMATIC CODE |
+| **CINEMATIC** | + 1–2 pins curtos, 1 scrub, sticky-media | CINEMATIC CODE |
+| **SCROLL STORYTELLING** | a página é a narrativa: gramática forte, pico dominante, signature move | CINEMATIC CODE / AI FILM READY |
+
+Comece em **STATIC LIGHT**; suba só com 2+ sinais (ticket, narrativa, demo,
+público estético, tráfego orgânico). **Nicho sensível, advertorial, captura e
+tráfego pago de alto volume: no máximo MOTION.** Downgrade automático em runtime
+sob `prefers-reduced-motion` / Save-Data / 2g-3g / lib ausente.
+
+Os princípios de **direção de arte** (`art-direction-plus.md`) e **anti-IA**
+(`anti-ai.md`) valem para **todos os níveis**. Gramática, curva de sentimento,
+pico e fingerprint gate valem a partir de **MOTION**.
 
 ### PREMIUM STATIC (padrão)
 
@@ -312,6 +348,7 @@ Todos em Node puro (sem dependências). Rodam em `scripts/`.
 | `validate-links.js` | Varre o HTML: links internos/âncoras, `href` de CTA, URL de checkout (formato + plataforma), `src` de imagens/vídeos, detecta quebrados/relativos inválidos/`#` vazios/`http://` inseguro. |
 | `package.js` | Gera `dist/pagina.zip` (zip nativo via `zlib`/deflate ou `tar`+`Compress-Archive` no Windows) e finaliza `README-PUBLICAR.md` com instruções por hospedagem. |
 | `verify.js` | QA completo: checklist de `qa-checklist.md` automatizável — headings, alt, contraste (tokens), viewport, `prefers-reduced-motion`, meta tags, peso de assets, presença de CTA acima da dobra, disclaimers de compliance, ausência de promessas absolutas (lista de termos proibidos). |
+| `scroll-qa.js` | **QA visual de scroll** (camada `scroll-experience/`). Abre a página num navegador headless (Edge/Chrome; `BROWSER_PATH`), caminha o scroll em N posições, monta um contact sheet e detecta scroll morto, overflow horizontal, elementos presos invisíveis, mídia ausente, contraste fino, e recheca com `prefers-reduced-motion`. **Sem navegador → imprime o checklist manual e sai 0.** Detalhe em `scroll-experience/visual-qa.md`. |
 
 Uso: `node scripts/<script>.js <caminho>`. Sem argumento → imprime ajuda.
 
@@ -360,6 +397,14 @@ Rode mentalmente + com scripts o `references/qa-checklist.md`. Bloqueadores:
       sem número de resultado sem fonte; disclaimers presentes; conforme `compliance-google.md` / `compliance-meta.md`.
 - [ ] Copy: promessa clara, oferta clara, uma ação principal, sem jargão vazio.
 - [ ] Identidade visual própria (não parece template nem outro produto).
+- [ ] **Anti-IA** (`scroll-experience/anti-ai.md`): sem gradient text, glow, glass
+      decorativo, emoji-ícone, "scroll ↓", em-dash visível, grid de cards como
+      estrutura, trap de paleta (creme+latão, AI-purple).
+- [ ] **Scroll** (a partir de MOTION): `scroll-qa.js` sem blocker + limpo sob
+      `prefers-reduced-motion`; **feel check** feito (3 curvas no `qa-report.md`);
+      **squint test** em 3 breakpoints; o **pico** é a maior mudança visual.
+- [ ] **Fingerprint gate** passou (`scroll-experience/fingerprint-gate.md`) — a
+      página difere das anteriores em ≥ 4 das 6 dimensões.
 - [ ] `dist/` + `README-PUBLICAR.md` + `pagina.zip` gerados.
 
 Se algo falhar → conserta → revalida. Só então entrega.
@@ -418,6 +463,17 @@ forge-sales-page-skill/
     compliance-meta.md           ← políticas Meta Ads e como escrever dentro delas
     checkout-integrations.md     ← Kiwify, Hotmart, Digistore24, Stripe, genérico; tracking
     qa-checklist.md              ← checklist completo de QA (manual + automatizável)
+  scroll-experience/             ← CAMADA de scroll-storytelling + direção de arte premium
+    README.md                    ← o que é, quando ativar, como se encaixa no fluxo
+    mode-decision.md             ← 4 níveis (STATIC LIGHT/MOTION/CINEMATIC/STORYTELLING) + matriz
+    scroll-grammars.md           ← 8 gramáticas de página; o que cada uma proíbe
+    feeling-curve.md             ← curva de sentimento + pico único (peak-end)
+    art-direction-plus.md        ← taste floor numérico + método do preâmbulo de estilo
+    motion-system.md             ← devices + janelas de cue (adaptado ao data-animate)
+    anti-ai.md                   ← proibições anti-template / anti-"cara de IA" + squint test
+    fingerprint-gate.md          ← 6 dimensões anti-repetição + FINGERPRINTS.md
+    visual-qa.md                 ← feel check + harness scroll-qa
+    FINGERPRINTS.template.md     ← semente do registro (copiar para output/FINGERPRINTS.md)
   templates/                     ← REFERÊNCIA ESTRUTURAL (não preencher; adaptar)
     direct-response/
     app-saas/
@@ -432,6 +488,8 @@ forge-sales-page-skill/
     validate-links.js
     package.js
     verify.js
+    scroll-qa.js                 ← QA visual de scroll (headless; degrada sem navegador)
+    lib/
   examples/
     README.md
     exemplo-brief.json           ← exemplo de entrada preenchida

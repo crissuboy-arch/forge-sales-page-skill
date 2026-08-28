@@ -4,6 +4,13 @@ Guia do modo **CINEMATIC CODE** (e da camada de motion do AI FILM READY).
 Motion é tempero, não prato. Só entra quando a **história** justifica e a
 **performance** aguenta.
 
+> **Este arquivo é dono da stack** (libs, carregamento, orçamento de performance,
+> `prefers-reduced-motion`, fallback estático). A **decisão** de *quanto* scroll e
+> *qual* efeito casa com *qual* emoção mora na camada `scroll-experience/`:
+> `mode-decision.md` (4 níveis), `motion-system.md` (devices + janelas de cue),
+> `feeling-curve.md` (o que animar e onde). O QA visual está em
+> `scroll-experience/visual-qa.md` (`scripts/scroll-qa.js`).
+
 ---
 
 ## 1. Quando usar motion narrativo

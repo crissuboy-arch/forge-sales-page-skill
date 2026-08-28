@@ -46,7 +46,7 @@ Fase 6/11 do fluxo. `[A]` = automatizado por `verify.js`/`validate-links.js`;
 - `[M]` Lighthouse mobile: Perf ≥ 90 (STATIC ≥ 95), A11y ≥ 95, Best Practices ≥ 95, SEO ≥ 95.
 - `[M]` LCP < 2.5s (meta STATIC < 2.0s), CLS < 0.1 (meta < 0.05), INP ok.
 
-## 5. Motion (só CINEMATIC / AI FILM READY)
+## 5. Motion e scroll (a partir do nível MOTION — `scroll-experience/`)
 
 - `[M]` 60fps no scroll com CPU 4× throttle.
 - `[A]` `motion.js` checa `window.gsap` e sai limpo se ausente.
@@ -54,6 +54,31 @@ Fase 6/11 do fluxo. `[A]` = automatizado por `verify.js`/`validate-links.js`;
 - `[A]` Libs pinadas + SRI (CDN) ou vendorizadas em `assets/vendor/`.
 - `[M]` Save-Data / conexão lenta → motion e vídeo desligados.
 - `[A]` Animações só em `transform`/`opacity`.
+- `[A]` `node scripts/scroll-qa.js <dist>` sem **blocker** (overflow horizontal,
+  elemento preso invisível, mídia ausente) — nem no passe normal, nem sob
+  `prefers-reduced-motion` emulado. Ver `scroll-experience/visual-qa.md`.
+- `[M]` **Feel check** (`scroll-experience/feeling-curve.md §4`): rolar sem reler o
+  brief, 1 palavra de emoção por seção, comparar com a curva pretendida. As 3
+  curvas (pretendida / sentida / mudanças) no `qa-report.md`.
+- `[M]` **Squint test** (`scroll-experience/anti-ai.md §7`) em 360 / 768 / 1440:
+  primário, secundário e grandes blocos continuam identificáveis.
+- `[M]` O **pico** (`feeling-curve.md §2`) é a maior mudança visual da página e
+  tem o maior espaço de scroll; a seção anterior a ele cria silêncio.
+- `[A]` **Fingerprint gate** (`scroll-experience/fingerprint-gate.md`): a página
+  difere de cada linha do `output/FINGERPRINTS.md` em ≥ 4 das 6 dimensões.
+
+## 5b. Anti-template / anti-"cara de IA" (`scroll-experience/anti-ai.md`)
+
+- `[A]` Varredura: sem `background-clip: text` colorido (gradient text), sem
+  `cursor: url()/none`, sem `text-shadow` de glow, sem "scroll"/"↓" como
+  indicador, sem em-dash entre espaços em texto visível, sem verbos de enchimento
+  ("seamless", "unleash", "revolutionize").
+- `[M]` Sem grid de cards idênticos **como estrutura da página**; sem 3 colunas de
+  feature iguais; hero com ≤ 4 elementos de texto.
+- `[M]` Sem trap de paleta: creme+latão ("artesanal premium" genérico), gradiente
+  violeta→azul com glow ("AI-purple"), preto/branco puros.
+- `[A]`/`[M]` Nenhum **dashboard/print falso** apresentado como prova real; telas
+  de demonstração rotuladas ("dados de teste"). (também é compliance — §9)
 
 ## 6. AI FILM READY (slots de mídia)
 
@@ -112,8 +137,12 @@ Fase 6/11 do fluxo. `[A]` = automatizado por `verify.js`/`validate-links.js`;
 
 ## Severidades
 
-- **blocker**: seções 1, 7, 9, 11 + "sem scroll horizontal" + "abre sem servidor" + reduced-motion.
-- **high**: performance abaixo da meta, a11y com falhas, responsivo com quebra visível.
-- **medium**: microcopy, otimização de imagem, refinamento de motion.
+- **blocker**: seções 1, 7, 9, 11 + "sem scroll horizontal" + "abre sem servidor" +
+  reduced-motion + `scroll-qa.js` sem blocker (overflow horizontal, elemento preso
+  invisível, mídia ausente, reduced-motion preso) + dashboard/print falso como prova.
+- **high**: performance abaixo da meta, a11y com falhas, responsivo com quebra
+  visível, scroll morto, feel check divergente da curva, trap de paleta / grid de
+  cards como estrutura / gradient text (anti-IA — corrigir ou justificar).
+- **medium**: microcopy, otimização de imagem, refinamento de motion, contraste fino.
 
 Registrar o resultado em `output/<slug>/qa-report.md`.

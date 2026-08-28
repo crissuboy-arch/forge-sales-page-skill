@@ -18,13 +18,18 @@ validada e pronta para publicar.
   objeções, provas, oferta, bônus, garantia, FAQ, CTAs, fechamento.
 - **Direção de arte única por produto** — nunca o mesmo visual, nunca identidades
   misturadas.
-- **3 modos visuais:**
+- **3 modos visuais** (stack técnica):
   - `PREMIUM STATIC` — HTML/CSS/JS leve, sofisticado, rápido (padrão).
   - `CINEMATIC CODE` — storytelling de scroll com GSAP + Lenis quando faz sentido.
   - `AI FILM READY` — estrutura pronta para footage de IA, funcionando hoje com placeholders.
+- **4 níveis de scroll** (camada `scroll-experience/`): `STATIC LIGHT` · `MOTION` ·
+  `CINEMATIC` · `SCROLL STORYTELLING` — a skill decide quanto a página precisa, com
+  gramática de página, curva de sentimento, pico único e gate anti-repetição.
 - **Exportação:** `dist/index.html`, `dist/assets/`, `dist/README-PUBLICAR.md`, `dist/pagina.zip`.
 - **Validação automática:** mobile, desktop, links, CTAs, checkout, imagens
-  quebradas, acessibilidade básica, performance, `prefers-reduced-motion`.
+  quebradas, acessibilidade básica, performance, `prefers-reduced-motion`, e
+  **QA visual de scroll** (contact sheet + detecção de scroll morto / overflow /
+  elemento preso).
 - **Guardrails de compliance:** Google Ads, Meta Ads, sem promessas absolutas,
   sem provas/depoimentos inventados.
 
@@ -56,6 +61,7 @@ validada e pronta para publicar.
 | `references/offer-analysis.md` | Como dissecar avatar, oferta (value stack), mecanismo único, objeções, estágio de consciência e sofisticação de mercado. |
 | `references/visual-direction.md` | Como criar identidade única: style ticket, tokens CSS, tipografia, cor, forma, fotografia. Detalhe dos 3 modos. |
 | `references/cinematic-motion.md` | GSAP/ScrollTrigger/Lenis: padrões de scroll, orçamento de performance, `prefers-reduced-motion`, fallback estático, como vendorizar libs. |
+| `scroll-experience/` | **Camada de scroll-storytelling + direção de arte premium** (ref.: ScrollCraft). 4 níveis de scroll (STATIC LIGHT/MOTION/CINEMATIC/STORYTELLING), 8 gramáticas de página, curva de sentimento + pico único, taste floor numérico, anti-"cara de IA", fingerprint gate anti-repetição, feel check + harness `scroll-qa`. Não é engine — a stack continua sendo a de `cinematic-motion.md`. |
 | `references/presell.md` | Anatomia de presell (story-based, listicle, quiz-lite, "carta de descoberta"), quando usar cada uma, ponte para o checkout. |
 | `references/advertorial.md` | Anatomia de advertorial editorial, tom jornalístico, disclosure de publicidade, o que Google permite. |
 | `references/affiliate-pages.md` | Regras de página de afiliado: presell obrigatório, disclosure, não clonar o produtor, preservar `?aff=`/`src`. |
@@ -68,6 +74,7 @@ validada e pronta para publicar.
 | `scripts/validate-links.js` | Audita links, âncoras, CTAs, URL de checkout, imagens/vídeos. |
 | `scripts/package.js` | Gera `pagina.zip` e finaliza o guia de publicação. |
 | `scripts/verify.js` | QA automatizado: acessibilidade, meta tags, performance, termos proibidos de compliance. |
+| `scripts/scroll-qa.js` | QA visual de scroll: navegador headless caminha o scroll, monta contact sheet, detecta scroll morto / overflow horizontal / elemento preso invisível / mídia ausente / contraste fino. Degrada para checklist manual sem navegador. |
 | `examples/` | Exemplo de `brief.json` preenchido e notas. |
 | `output/` | Saída por projeto (ignorada pelo git). |
 

@@ -11,6 +11,7 @@
   "scripts": {
     "verify": "node scripts/verify.js",
     "validate-links": "node scripts/validate-links.js",
+    "scroll-qa": "node scripts/scroll-qa.js",
     "build": "node scripts/build.js",
     "package": "node scripts/package.js"
   },
