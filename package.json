@@ -1,0 +1,29 @@
+{
+  "name": "forge-sales-page-skill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Skill reutilizável para agentes (Claude Code, Codex) gerarem páginas de vendas, presells e advertoriais profissionais em HTML/CSS/JS estático.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "verify": "node scripts/verify.js",
+    "validate-links": "node scripts/validate-links.js",
+    "build": "node scripts/build.js",
+    "package": "node scripts/package.js"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "keywords": [
+    "sales-page",
+    "landing-page",
+    "advertorial",
+    "presell",
+    "copywriting",
+    "claude-code",
+    "agent-skill",
+    "static-site"
+  ]
+}

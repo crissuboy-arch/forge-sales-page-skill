@@ -1,0 +1,43 @@
+<!--
+  REFERÊNCIA ESTRUTURAL — Beauty / skincare / cosméticos. NÃO É GABARITO.
+  <head>, <header>, <footer> e rodapé legal: ver templates/direct-response/reference.html.
+  Abaixo, só a ordem de <section> do <main> com os ajustes da vertical.
+  Compliance: templates/beauty/README.md + references/compliance-*.md
+-->
+<main>
+  <!-- HERO: promessa de aparência/sensação + produto em destaque (macro de textura) + CTA -->
+  <section class="hero" aria-label="Apresentação">
+    <h1><!-- resultado visível + para qual tipo de pele/cabelo --></h1>
+    <p class="sub"><!-- o ativo/mecanismo + tempo de rotina --></p>
+    <a class="btn btn-cta" data-cta="hero" href="https://checkout.exemplo.com">Quero experimentar</a>
+    <p class="microcopy">Pagamento seguro · Frete e prazo · Política de troca</p>
+    <img src="assets/img/produto.jpg" width="1200" height="1200" alt="Produto ... com textura ...">
+  </section>
+
+  <section aria-label="A frustração comum"><h2></h2><!-- rotina que não entrega; sem estigma --></section>
+  <section aria-label="Por que a maioria dos produtos falha"><h2></h2></section>
+  <section id="mecanismo" aria-label="O ativo / a tecnologia"><h2></h2><!-- ingrediente-chave como mecanismo, com fonte --></section>
+  <section aria-label="O ritual"><h2></h2><!-- onde entra na rotina; ordem de camadas; manhã/noite --></section>
+  <section aria-label="Demonstração"><h2></h2><!-- macro de textura, aplicação, resultado em pele real (consentimento) --></section>
+  <section aria-label="O que vem"><h2></h2><!-- volume, duração do frasco, o que acompanha --></section>
+  <section aria-label="Ingredientes e uso"><h2></h2><!-- lista, alergênicos, modo de uso, teste dermatológico se houver --></section>
+  <section aria-label="Provas"><h2></h2><!-- SOMENTE reais/verificadas; reviews com consentimento --></section>
+
+  <section id="oferta" aria-label="A oferta">
+    <h2></h2>
+    <p class="price"></p>
+    <a class="btn btn-cta" data-cta="oferta" href="https://checkout.exemplo.com">Adicionar ao carrinho</a>
+    <p class="microcopy">Frete · Prazo de entrega · Se chegar danificado, reenvio sem custo</p>
+  </section>
+
+  <section aria-label="Bônus"><h2></h2><!-- amostra, guia de rotina, necessaire --></section>
+  <section aria-label="Garantia"><h2></h2><!-- satisfação / devolução conforme brief.guarantee --></section>
+  <section id="faq" aria-label="Perguntas frequentes">
+    <h2>Perguntas frequentes</h2>
+    <details><summary>Serve para pele sensível/oleosa/madura?</summary><p></p></details>
+    <details><summary>Em quanto tempo vejo diferença?</summary><p><!-- honesto, "aparência de" --></p></details>
+    <details><summary>Como funciona a troca?</summary><p></p></details>
+  </section>
+  <section aria-label="Fechamento"><h2></h2><a class="btn btn-cta" data-cta="final" href="https://checkout.exemplo.com">Quero experimentar</a></section>
+</main>
+<!-- Claim cosmético, nunca terapêutico. Sem antes/depois manipulado. -->

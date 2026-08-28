@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forge-sales-page-skill/schemas/product.schema.json",
+  "title": "FORGE Product Brief",
+  "description": "Dados normalizados de entrada da skill. O agente preenche a partir do usuário e salva como output/<slug>/brief.json.",
+  "type": "object",
+  "required": [
+    "name",
+    "description",
+    "niche",
+    "audience",
+    "mainPromise",
+    "benefits",
+    "price",
+    "checkoutUrl",
+    "checkoutPlatform",
+    "language",
+    "trafficType"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "niche": { "type": "string", "minLength": 1 },
+    "audience": {
+      "type": "object",
+      "required": ["who", "mainPain"],
+      "properties": {
+        "who": { "type": "string" },
+        "mainPain": { "type": "string" },
+        "desires": { "type": "array", "items": { "type": "string" } },
+        "awarenessStage": {
+          "type": "string",
+          "enum": ["unaware", "problem-aware", "solution-aware", "product-aware", "most-aware", "unknown"],
+          "default": "unknown"
+        },
+        "marketSophistication": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "1=mercado novo (só afirmar), 5=saturado (mecanismo/identidade)"
+        }
+      }
+    },
+    "mainPromise": { "type": "string", "minLength": 1 },
+    "uniqueMechanism": {
+      "type": "string",
+      "description": "O 'como' diferente. Se ausente, o agente propõe um a partir da descrição e confirma."
+    },
+    "benefits": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "pains": { "type": "array", "items": { "type": "string" } },
+    "objections": { "type": "array", "items": { "type": "string" } },
+    "price": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "examples": ["BRL", "USD", "EUR"] },
+        "installments": { "type": ["string", "null"] },
+        "anchorPrice": { "type": ["number", "null"] },
+        "recurring": {
+          "type": "string",
+          "enum": ["none", "monthly", "yearly"],
+          "default": "none"
+        }
+      }
+    },
+    "bonuses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "perceivedValue": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "guarantee": {
+      "type": ["object", "null"],
+      "properties": {
+        "days": { "type": "integer", "minimum": 0 },
+        "type": { "type": "string", "examples": ["incondicional", "condicional", "satisfação ou reembolso"] },
+        "conditions": { "type": "string" }
+      }
+    },
+    "proof": {
+      "type": "array",
+      "description": "SOMENTE provas reais fornecidas pelo usuário. Cada item deve ser verificável.",
+      "items": {
+        "type": "object",
+        "required": ["type", "content", "verified"],
+        "properties": {
+          "type": { "type": "string", "enum": ["testimonial", "case-study", "data", "authority", "media-mention", "screenshot", "certification"] },
+          "content": { "type": "string" },
+          "attribution": { "type": "string" },
+          "source": { "type": "string" },
+          "verified": { "type": "boolean", "description": "true = usuário confirmou que é real e pode comprovar" }
+        }
+      }
+    },
+    "checkoutUrl": { "type": "string", "format": "uri" },
+    "checkoutPlatform": {
+      "type": "string",
+      "enum": ["kiwify", "hotmart", "digistore24", "stripe", "generic"]
+    },
+    "checkoutParams": {
+      "type": "object",
+      "description": "Parâmetros a preservar/anexar na URL (utm, aff, src, etc).",
+      "additionalProperties": { "type": "string" }
+    },
+    "language": { "type": "string", "examples": ["pt-BR", "en", "es"] },
+    "trafficType": {
+      "type": "string",
+      "enum": ["organic", "google-ads", "meta-ads", "affiliate"]
+    },
+    "pageFormat": {
+      "type": "string",
+      "enum": ["sales", "presell", "advertorial", "optin", "saas", "thankyou", "auto"],
+      "default": "auto"
+    },
+    "visualMode": {
+      "type": "string",
+      "enum": ["premium-static", "cinematic-code", "ai-film-ready", "auto"],
+      "default": "auto"
+    },
+    "styleNotes": { "type": "string", "description": "Referências, marcas admiradas, palavras de tom." },
+    "brand": {
+      "type": "object",
+      "properties": {
+        "logo": { "type": "string" },
+        "palette": { "type": "array", "items": { "type": "string" } },
+        "fonts": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["logo", "product-photo", "headshot", "screenshot", "video", "icon", "background", "other"] },
+          "path": { "type": "string" },
+          "alt": { "type": "string" }
+        }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "sensitiveNiche": { "type": "boolean", "default": false },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["health", "weight-loss", "finance", "make-money", "relationship", "supplements", "crypto", "gambling", "other"] }
+        },
+        "requiresAdvertorialDisclosure": { "type": "boolean", "default": false }
+      }
+    },
+    "domain": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}

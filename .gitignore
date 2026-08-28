@@ -1,0 +1,44 @@
+# Saída gerada por projeto
+output/*
+!output/.gitkeep
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Segredos / credenciais — NUNCA versionar
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+credentials.json
+secrets.json
+*.secret
+.netrc
+auth.json
+
+# Config local de ferramentas
+.claude/settings.local.json
+.claude/*.local.*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Build artifacts soltos
+dist/
+*.zip
+!templates/**/*.zip

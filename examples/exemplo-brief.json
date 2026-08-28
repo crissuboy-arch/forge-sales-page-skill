@@ -1,0 +1,65 @@
+{
+  "name": "Método Raiz Calma",
+  "description": "Programa digital de 6 semanas com práticas curtas diárias (5–10 min) para ajudar adultos ansiosos a criar uma rotina de autorregulação. Vídeos + áudios guiados + diário de acompanhamento.",
+  "niche": "bem-estar / saúde mental",
+  "audience": {
+    "who": "Adultos de 28–45 anos, com rotina puxada, que já tentaram apps de meditação e não mantiveram o hábito",
+    "mainPain": "Sensação de estar sempre em alerta, dificuldade para desligar à noite, culpa por não conseguir manter uma prática",
+    "desires": ["dormir melhor", "reagir com menos estopim", "ter um método simples que caiba no dia"],
+    "awarenessStage": "solution-aware",
+    "marketSophistication": 4
+  },
+  "mainPromise": "Construir, em 6 semanas, uma rotina de 5 minutos por dia que ajuda a baixar o nível de alerta e a dormir melhor",
+  "uniqueMechanism": "Sequência 'Raiz': ativar o corpo antes da mente — 3 micro-práticas somáticas encadeadas que a pessoa faz em pé, sem precisar 'meditar'",
+  "benefits": [
+    "Práticas de 5–10 min que cabem entre reuniões",
+    "Trilha de 6 semanas com uma única tarefa por dia",
+    "Áudios para ouvir no fone, sem tela",
+    "Diário simples para enxergar a evolução",
+    "Protocolo específico para a hora de dormir"
+  ],
+  "pains": [
+    "Começa apps de meditação e larga na primeira semana",
+    "Sente que 'não sabe meditar'",
+    "Acorda cansado mesmo dormindo 7h"
+  ],
+  "objections": [
+    "Não vou ter constância",
+    "Já tentei meditação e não funcionou pra mim",
+    "Não tenho tempo",
+    "É mais um curso que vou deixar parado"
+  ],
+  "price": {
+    "amount": 197,
+    "currency": "BRL",
+    "installments": "12x de R$ 19,90",
+    "anchorPrice": 397,
+    "recurring": "none"
+  },
+  "bonuses": [
+    { "title": "Kit Sono", "description": "3 áudios + checklist de higiene do sono", "perceivedValue": 97 },
+    { "title": "Encontro ao vivo de dúvidas", "description": "1 sessão mensal por 3 meses", "perceivedValue": 150 }
+  ],
+  "guarantee": { "days": 14, "type": "incondicional", "conditions": "Reembolso total em até 14 dias, sem perguntas" },
+  "proof": [
+    { "type": "testimonial", "content": "Foi a primeira vez que mantive uma prática por mais de um mês.", "attribution": "Marina S., participante do piloto", "source": "formulário de feedback interno, jan/2026", "verified": true },
+    { "type": "authority", "content": "Criado por psicóloga com CRP ativo e 9 anos de clínica em ansiedade", "attribution": "—", "source": "registro CRP", "verified": true }
+  ],
+  "checkoutUrl": "https://pay.kiwify.com.br/abc123?src=site",
+  "checkoutPlatform": "kiwify",
+  "checkoutParams": { "src": "site" },
+  "language": "pt-BR",
+  "trafficType": "meta-ads",
+  "pageFormat": "sales",
+  "visualMode": "premium-static",
+  "styleNotes": "Calmo, natural, adulto. Referências: sites de estúdios de cerâmica, paleta terrosa. Nada 'fofo' ou 'místico'.",
+  "brand": { "logo": "", "palette": [], "fonts": [] },
+  "assets": [],
+  "compliance": {
+    "sensitiveNiche": true,
+    "categories": ["health"],
+    "requiresAdvertorialDisclosure": false
+  },
+  "domain": "metodoraizcalma.com.br",
+  "notes": "Piloto rodou com 40 pessoas em dez/2025-jan/2026. Não usar linguagem de cura. Não prometer fim da ansiedade."
+}

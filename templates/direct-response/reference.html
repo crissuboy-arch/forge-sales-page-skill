@@ -1,0 +1,149 @@
+<!--
+  REFERÊNCIA ESTRUTURAL — Página de vendas long-form (direct response)
+  NÃO É GABARITO. Não copie. Use como checklist de seções e landmarks.
+  A página real: identidade visual própria (visual-direction.md), copy de copy.md,
+  tokens no :root, CSS/JS escritos do zero. Remova estes comentários no build.
+
+  Ordem canônica (adaptar à consciência do público — sales-architecture.md §4.1):
+  hero → dor → agitação → história/por que falha → mecanismo → produto →
+  benefícios → prova → oferta → bônus → garantia → FAQ → autoridade →
+  recap+CTA → fechamento → rodapé legal
+-->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><!-- ≤60 car: promessa + marca --></title>
+  <meta name="description" content="">
+  <link rel="canonical" href="https://exemplo.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="">
+  <meta property="og:description" content="">
+  <meta property="og:image" content="assets/img/og.jpg">
+  <meta property="og:url" content="https://exemplo.com/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="assets/img/favicon.svg">
+  <!-- <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <!-- FORGE:ANALYTICS -->
+</head>
+<body>
+  <!-- Barra fina opcional com 1 CTA sticky (aparece após o hero) -->
+  <header class="site-header" hidden>
+    <a class="brand" href="#">Marca</a>
+    <a class="btn btn-cta" data-cta="header" href="#oferta">Quero começar</a>
+  </header>
+
+  <main>
+    <!-- 1. HERO / above the fold -->
+    <section class="hero" aria-label="Apresentação">
+      <h1><!-- headline: promessa + para quem + mecanismo/prazo --></h1>
+      <p class="sub"><!-- subheadline: o "como" ou a prova mais forte --></p>
+      <ul class="proof-quick"><!-- 1 linha de prova real, se houver --></ul>
+      <a class="btn btn-cta" data-cta="hero" href="#oferta">CTA (verbo + resultado)</a>
+      <p class="microcopy">Pagamento seguro · Garantia de X dias</p>
+      <!-- mídia do produto: <img> com width/height, ou <video> (modo AI FILM READY) -->
+    </section>
+
+    <!-- 2. DOR / identificação (voz do avatar) -->
+    <section aria-label="O problema">
+      <h2><!-- nomeia a dor --></h2>
+      <!-- 3–5 frases-espelho. Meta Ads: NÃO usar 2ª pessoa acusatória (compliance-meta.md) -->
+    </section>
+
+    <!-- 3. AGITAÇÃO / custo de continuar assim (curta) -->
+    <section aria-label="O que está em jogo">
+      <h2></h2>
+    </section>
+
+    <!-- 4. HISTÓRIA / virada  OU  "por que as soluções comuns falham" -->
+    <section aria-label="A virada">
+      <h2></h2>
+    </section>
+
+    <!-- 5. MECANISMO ÚNICO (nomeado, 3 razões, analogia, evidência) -->
+    <section id="mecanismo" aria-label="Como funciona">
+      <h2></h2>
+    </section>
+
+    <!-- 6. O PRODUTO + "o que está dentro" (resultado por módulo/recurso) -->
+    <section aria-label="O que você recebe">
+      <h2></h2>
+      <ul><!-- itens com: recurso → o que faz → o que muda --></ul>
+    </section>
+
+    <!-- 7. BENEFÍCIOS → RESULTADO (bullets de fascination) -->
+    <section aria-label="Benefícios">
+      <h2></h2>
+    </section>
+
+    <!-- 8. PROVA — SOMENTE brief.proof com verified:true. Sem prova → autoridade/demonstração. -->
+    <section aria-label="Provas e resultados">
+      <h2></h2>
+      <!-- <figure><blockquote>...</blockquote><figcaption>Nome real, contexto</figcaption></figure> -->
+    </section>
+
+    <!-- 9. OFERTA -->
+    <section id="oferta" aria-label="A oferta">
+      <h2></h2>
+      <!-- value stack, ancoragem honesta (de/por só se real), preço, parcelamento -->
+      <p class="price"></p>
+      <a class="btn btn-cta" data-cta="oferta" href="https://checkout.exemplo.com">CTA</a>
+      <p class="microcopy">O que acontece ao clicar: você vai para o checkout seguro da [plataforma].</p>
+    </section>
+
+    <!-- 10. BÔNUS (cada um remove uma objeção) -->
+    <section aria-label="Bônus">
+      <h2></h2>
+    </section>
+
+    <!-- 11. GARANTIA / reversão de risco -->
+    <section aria-label="Garantia">
+      <h2></h2>
+    </section>
+
+    <!-- 12. FAQ / objeções (5–8; <details>/<summary> acessível) -->
+    <section id="faq" aria-label="Perguntas frequentes">
+      <h2>Perguntas frequentes</h2>
+      <details><summary>Pergunta (objeção real)</summary><p>Resposta: valida → reframe → prova → mini-CTA.</p></details>
+    </section>
+
+    <!-- 13. AUTORIDADE / sobre o criador (se aplicável) -->
+    <section aria-label="Quem está por trás">
+      <h2></h2>
+    </section>
+
+    <!-- 14. RECAPITULAÇÃO da oferta + CTA -->
+    <section aria-label="Resumo da oferta">
+      <h2></h2>
+      <a class="btn btn-cta" data-cta="recap" href="#oferta">CTA</a>
+    </section>
+
+    <!-- 15. FECHAMENTO + urgência VERDADEIRA (ou nenhuma) -->
+    <section aria-label="Fechamento">
+      <h2></h2>
+    </section>
+  </main>
+
+  <!-- 16. RODAPÉ LEGAL -->
+  <footer>
+    <nav aria-label="Links legais">
+      <a href="/politica-de-privacidade.html">Política de Privacidade</a>
+      <a href="/termos-de-uso.html">Termos de Uso</a>
+      <a href="/politica-de-reembolso.html">Política de Reembolso</a>
+      <a href="/contato.html">Contato</a>
+    </nav>
+    <p><!-- Razão social · CNPJ · e-mail de suporte --></p>
+    <!-- FORGE:DISCLAIMER  (build.js injeta isenções em nicho sensível) -->
+    <p class="fine-print">
+      <!-- "Este site não é parte do Google/Meta nem endossado por eles." (nichos de renda) -->
+      <!-- "Resultados variam conforme empenho e contexto e não são garantidos." -->
+    </p>
+  </footer>
+
+  <script src="assets/js/main.js" defer></script>
+  <!-- Modo CINEMATIC: <script src="assets/vendor/gsap.min.js" defer></script> etc. + motion.js -->
+</body>
+</html>

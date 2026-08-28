@@ -1,0 +1,99 @@
+<!--
+  REFERÊNCIA ESTRUTURAL — camada CINEMATIC CODE / AI FILM READY. NÃO É GABARITO.
+  Combine a ORDEM DE SEÇÕES da vertical (direct-response/, editorial/, etc.)
+  com a camada de motion + mídia abaixo. Ver references/cinematic-motion.md.
+-->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title></title>
+  <meta name="description" content="">
+  <link rel="canonical" href="https://exemplo.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="">
+  <meta property="og:description" content="">
+  <meta property="og:image" content="assets/img/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="assets/img/favicon.svg">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <!-- FORGE:ANALYTICS -->
+  <style>
+    /* Estado padrão: TUDO visível (fallback sem JS). */
+    [data-animate]{opacity:1;transform:none}
+    /* motion.js adiciona .js-motion no <html> SÓ depois de confirmar window.gsap */
+    .js-motion [data-animate]{opacity:0;transform:translateY(16px)}
+    .no-motion [data-animate]{opacity:1!important;transform:none!important}
+    @media (prefers-reduced-motion: reduce){
+      *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- HERO: texto e CTA em HTML (LCP), vídeo apenas de fundo -->
+    <section class="hero" aria-label="Apresentação">
+      <div class="hero-media" aria-hidden="true">
+        <video data-media-slot="assets/media/hero.mp4" poster="assets/media/hero-poster.jpg"
+               muted playsinline loop preload="none">
+          <source src="assets/media/hero.webm" type="video/webm">
+          <source src="assets/media/hero.mp4" type="video/mp4">
+          <img src="assets/media/hero-poster.jpg" width="1600" height="900" alt="">
+        </video>
+      </div>
+      <h1 data-animate><!-- headline (já no DOM; não animar de forma que atrase o LCP) --></h1>
+      <p class="sub" data-animate></p>
+      <a class="btn btn-cta" data-cta="hero" href="https://checkout.exemplo.com" data-animate>CTA</a>
+      <p class="microcopy" data-animate>Pagamento seguro · Garantia de X dias</p>
+    </section>
+
+    <!-- SEÇÕES seguindo a ordem da vertical escolhida.
+         Marque com data-animate o que deve entrar com movimento.
+         B-roll opcional por seção: -->
+    <section aria-label="Mecanismo" id="mecanismo">
+      <h2 data-animate></h2>
+      <p data-animate></p>
+      <!-- <video data-media-slot="assets/media/broll-1.mp4" poster="..." muted playsinline loop preload="none"></video> -->
+    </section>
+
+    <!-- ...demais seções (produto, prova, oferta, bônus, garantia, faq, fechamento)... -->
+
+    <section id="oferta" aria-label="A oferta">
+      <h2 data-animate></h2>
+      <p class="price" data-animate></p>
+      <a class="btn btn-cta" data-cta="oferta" href="https://checkout.exemplo.com" data-animate>CTA</a>
+    </section>
+  </main>
+
+  <footer>
+    <nav aria-label="Links legais">
+      <a href="/politica-de-privacidade.html">Política de Privacidade</a>
+      <a href="/termos-de-uso.html">Termos de Uso</a>
+      <a href="/contato.html">Contato</a>
+    </nav>
+    <p><!-- razão social · CNPJ · suporte --></p>
+    <!-- FORGE:DISCLAIMER -->
+  </footer>
+
+  <!-- LIBS: vendorizadas em assets/vendor/ OU CDN pinada + integrity (SRI). Sempre defer. -->
+  <script src="assets/vendor/gsap.min.js" defer></script>
+  <script src="assets/vendor/ScrollTrigger.min.js" defer></script>
+  <script src="assets/vendor/lenis.min.js" defer></script>
+  <script src="assets/js/main.js" defer></script>
+  <script src="assets/js/motion.js" defer></script>
+  <!--
+    motion.js (esqueleto):
+      if (!window.gsap) return;                       // sai limpo se a lib falhar
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const slow = navigator.connection && (navigator.connection.saveData ||
+                   /2g|slow-2g|3g/.test(navigator.connection.effectiveType || ''));
+      if (reduce || slow) { document.documentElement.classList.add('no-motion'); return; }
+      document.documentElement.classList.add('js-motion');
+      gsap.registerPlugin(ScrollTrigger);
+      // initLenis(); reveals com ScrollTrigger.batch('[data-animate]', ...);
+      // trocar poster->vídeo só após 'loadeddata'; IntersectionObserver para play/pause do b-roll.
+  -->
+</body>
+</html>
