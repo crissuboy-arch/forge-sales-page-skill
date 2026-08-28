@@ -102,6 +102,7 @@ decisão, checklists e exemplos.
 | Motion / scroll / GSAP (stack, orçamento, fallback) | `references/cinematic-motion.md` |
 | **Devices de scroll + janelas de cue** | `scroll-experience/motion-system.md` |
 | Checkout | `references/checkout-integrations.md` |
+| **SEO on-page, técnico, social, schema** | `references/seo.md` |
 | Compliance Google | `references/compliance-google.md` |
 | Compliance Meta | `references/compliance-meta.md` |
 | QA final | `references/qa-checklist.md` |
@@ -310,13 +311,16 @@ usuário tem marca definida, respeite-a; se não, crie e justifique.
 3. Escreva `style.md` (direção de arte — seção 7).
 4. Escreva `copy.md` (todos os blocos de texto aprovados).
 5. Monte o site-fonte em `output/<slug>/src/`:
-   - `index.html` semântico e acessível
+   - `index.html` semântico e acessível, com `<head>` completo + JSON-LD (`references/seo.md`)
    - `assets/css/styles.css` (tokens CSS custom properties → tema por produto)
+   - `assets/js/config.js` (ponto único: `SITE_URL`, `CHECKOUT_URL`, preços, contato)
    - `assets/js/main.js` (reveals, FAQ accordion, CTA tracking hook, sticky CTA)
+   - `assets/js/seo.js` (aplica `SITE_URL` a canonical/OG/schema — `references/seo.md §5`)
    - `assets/js/motion.js` (só CINEMATIC/AI FILM — carregado com `defer`)
-   - `assets/img/`, `assets/fonts/`, `assets/media/`
+   - `assets/img/` (inclui `og.png` 1200×630 dos assets reais + `apple-touch-icon.png`), `assets/fonts/`, `assets/media/`
+   - raiz: `robots.txt`, `sitemap.xml`, `site.webmanifest`
 6. Rode os scripts (seção 9) apontando para `output/<slug>/src/`:
-   - `node scripts/verify.js output/<slug>/src` — QA técnico e de conteúdo
+   - `node scripts/verify.js output/<slug>/src` — QA técnico, SEO, conteúdo
    - `node scripts/validate-links.js output/<slug>/src` — links, CTAs, âncoras, imagens
    - `node scripts/build.js output/<slug>` — gera `dist/`
    - `node scripts/package.js output/<slug>` — gera `pagina.zip` + `README-PUBLICAR.md`
@@ -391,6 +395,9 @@ Rode mentalmente + com scripts o `references/qa-checklist.md`. Bloqueadores:
 - [ ] Todos os CTAs levam ao checkout correto (plataforma certa, params preservados).
 - [ ] Nenhum link/âncora/imagem quebrada (`validate-links.js` limpo).
 - [ ] Acessibilidade básica ok (`verify.js` limpo).
+- [ ] **SEO** (`references/seo.md`): `<head>` completo + `robots` + JSON-LD válido
+      sem review/rating; `robots.txt` / `sitemap.xml` / `site.webmanifest`; OG image
+      1200×630 PNG dos assets reais; `title`/`description`/`schema` únicos por página.
 - [ ] `prefers-reduced-motion` desliga animações.
 - [ ] Performance: assets < orçamento, imagens dimensionadas, JS `defer`.
 - [ ] **Compliance**: sem promessa absoluta, sem prova falsa, sem depoimento inventado,
@@ -462,6 +469,7 @@ forge-sales-page-skill/
     compliance-google.md         ← políticas Google Ads e como escrever dentro delas
     compliance-meta.md           ← políticas Meta Ads e como escrever dentro delas
     checkout-integrations.md     ← Kiwify, Hotmart, Digistore24, Stripe, genérico; tracking
+    seo.md                       ← SEO on-page/técnico/social + JSON-LD por formato; domínio configurável
     qa-checklist.md              ← checklist completo de QA (manual + automatizável)
   scroll-experience/             ← CAMADA de scroll-storytelling + direção de arte premium
     README.md                    ← o que é, quando ativar, como se encaixa no fluxo

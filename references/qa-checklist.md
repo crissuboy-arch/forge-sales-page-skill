@@ -11,6 +11,13 @@ Fase 6/11 do fluxo. `[A]` = automatizado por `verify.js`/`validate-links.js`;
 - `[A]` HTML válido: 1 `<h1>`, hierarquia de headings sem pular nível, `lang` no `<html>`.
 - `[A]` `<head>`: `<title>` (≤ 60 car.), meta description (≤ 160), viewport, charset,
   canonical, Open Graph (title, description, image, url, type), Twitter card, `theme-color`, favicon.
+- `[A]` **SEO técnico** (`references/seo.md`): `<meta name="robots">` explícito; JSON-LD
+  válido (`JSON.parse`) e **sem** `review`/`rating`/números inventados; `robots.txt` +
+  `sitemap.xml` + `site.webmanifest` na raiz; `<link rel="manifest">` no HTML;
+  `apple-touch-icon.png`. OG image é **PNG/JPG 1200×630** (não SVG), feita de assets reais.
+- `[M]` `title` / `description` / `@graph` **únicos** por página do projeto (vendas ≠ presell ≠ advertorial ≠ obrigado).
+- `[M]` `SITE_URL` preenchido no config, OU registrado como pendência de publicação
+  (canonical/OG/schema ficam no placeholder até lá).
 - `[A]` Sem erros no console (checagem estática de padrões comuns; `[M]` abrir e olhar o console).
 - `[A]` Nenhum link/âncora quebrado; nenhuma imagem/vídeo com `src` inválido.
 - `[A]` Nenhum recurso `http://` (só `https://` ou relativo).

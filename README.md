@@ -68,12 +68,13 @@ validada e pronta para publicar.
 | `references/compliance-google.md` | Políticas do Google Ads por categoria; termos proibidos; como escrever headline/claims dentro da política; landing page requirements. |
 | `references/compliance-meta.md` | Políticas do Meta Ads; "antes/depois" e saúde; personal attributes; como estruturar a página para aprovar. |
 | `references/checkout-integrations.md` | Kiwify, Hotmart, Digistore24, Stripe (Payment Link) e URL genérica: formato de URL, parâmetros, order bump/upsell, tracking (GA4, Meta Pixel, GTM), postback. |
+| `references/seo.md` | SEO on-page + técnico (`robots.txt`, `sitemap.xml`, `site.webmanifest`, OG image 1200×630, favicon/apple-touch), Open Graph/Twitter, JSON-LD por formato (só schema justificável — sem review/rating fake), domínio configurável (`SITE_URL` + `seo.js`), tracking ready sem IDs. |
 | `references/qa-checklist.md` | Checklist completo de QA — o que `verify.js`/`validate-links.js` automatizam e o que é manual. |
 | `templates/*/` | **Referência estrutural apenas.** Esqueleto de seções + notas de direção por vertical. A IA adapta tudo. |
 | `scripts/build.js` | `src/` → `dist/`, injeta `<head>`, minifica, gera `README-PUBLICAR.md`. |
 | `scripts/validate-links.js` | Audita links, âncoras, CTAs, URL de checkout, imagens/vídeos. |
 | `scripts/package.js` | Gera `pagina.zip` e finaliza o guia de publicação. |
-| `scripts/verify.js` | QA automatizado: acessibilidade, meta tags, performance, termos proibidos de compliance. |
+| `scripts/verify.js` | QA automatizado: acessibilidade, meta tags, **SEO técnico** (robots, JSON-LD válido sem review/rating, robots.txt/sitemap/manifest), performance, termos proibidos de compliance. |
 | `scripts/scroll-qa.js` | QA visual de scroll: navegador headless caminha o scroll, monta contact sheet, detecta scroll morto / overflow horizontal / elemento preso invisível / mídia ausente / contraste fino. Degrada para checklist manual sem navegador. |
 | `examples/` | Exemplo de `brief.json` preenchido e notas. |
 | `output/` | Saída por projeto (ignorada pelo git). |

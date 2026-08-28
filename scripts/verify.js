@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  C, log, ok, warn, err, head, resolveTarget, read, walk, fmtBytes, contrastRatio,
+  C, log, ok, warn, err, head, resolveTarget, read, walk, fmtBytes, contrastRatio, exists,
 } from './lib/util.js';
 
 const arg = process.argv[2];
@@ -52,6 +52,33 @@ const checks = [
 for (const [re, label, sev] of checks) {
   if (re.test(html)) P(label);
   else (sev === 'blocker' ? B : sev === 'high' ? H : M)(`faltando: ${label}`);
+}
+
+// ---------------- SEO técnico ----------------
+head('SEO técnico');
+const isNoindex = /<meta[^>]*name=["']robots["'][^>]*noindex/i.test(html);
+if (/<meta[^>]*name=["']robots["']/i.test(html)) P(isNoindex ? '<meta robots> (noindex — página não indexável, ok se intencional)' : '<meta robots> presente');
+else M('sem <meta name="robots"> — o default é indexável; declare explicitamente');
+
+const ld = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+if (!ld.length) { if (!isNoindex) M('sem dados estruturados (JSON-LD) — considere Organization / WebSite / SoftwareApplication / FAQPage conforme o conteúdo REAL'); }
+else {
+  let okLd = 0;
+  for (const m of ld) { try { JSON.parse(m[1]); okLd++; } catch (e) { H(`JSON-LD inválido: ${e.message}`); } }
+  if (okLd === ld.length) P(`${okLd} bloco(s) JSON-LD válido(s)`);
+  const ldText = ld.map((m) => m[1]).join(' ');
+  if (/aggregateRating|"review"\s*:|ratingValue|reviewCount/i.test(ldText))
+    H('JSON-LD contém review/rating — só use com avaliações REAIS e verificáveis (compliance)');
+}
+
+for (const f of ['robots.txt', 'sitemap.xml']) {
+  if (exists(path.join(root, f))) P(`${f} presente`);
+  else if (!isNoindex) M(`${f} ausente na raiz do site`);
+}
+if (exists(path.join(root, 'site.webmanifest')) || exists(path.join(root, 'manifest.json'))) {
+  const mf = exists(path.join(root, 'site.webmanifest')) ? 'site.webmanifest' : 'manifest.json';
+  if (/<link[^>]*rel=["']manifest["']/i.test(html)) P(`${mf} + <link rel="manifest">`);
+  else M(`${mf} existe mas falta <link rel="manifest"> no HTML`);
 }
 
 // ---------------- headings ----------------
