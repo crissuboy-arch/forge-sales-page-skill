@@ -279,6 +279,7 @@
 
   function generate(opts) {
     opts = opts || {};
+    lastGenOpts = opts;
     readForm();
     location.hash = '#/generating';
     resetGenView();
@@ -347,11 +348,16 @@
 
   function showFatal(title, message, isConfig) {
     var v = $('#view-generating .gen');
-    v.innerHTML = '<h2>' + escapeHtml(title) + '</h2><p class="muted" style="max-width:44ch;margin:0 auto 1.2rem">' + escapeHtml(message) + '</p>' +
-      (isConfig ? '<p class="tiny muted" style="max-width:44ch;margin:0 auto 1.2rem">Na Vercel: Project → Settings → Environment Variables → <code>NVIDIA_API_KEY</code> → Redeploy.</p>' : '') +
-      '<button class="btn btn--ghost btn--sm" id="genBack">Voltar ao briefing</button>';
+    v.innerHTML = '<h2>' + escapeHtml(title) + '</h2><p class="muted" style="max-width:46ch;margin:0 auto 1.2rem">' + escapeHtml(message) + '</p>' +
+      (isConfig ? '<p class="tiny muted" style="max-width:46ch;margin:0 auto 1.2rem">Na Vercel: Project → Settings → Environment Variables → <code>NVIDIA_API_KEY</code> → Redeploy.</p>' : '') +
+      '<div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap">' +
+      (isConfig ? '' : '<button class="btn btn--primary btn--sm" id="genRetry">Tentar de novo</button>') +
+      '<button class="btn btn--ghost btn--sm" id="genBack">Voltar ao briefing</button></div>';
     $('#genBack').addEventListener('click', function () { location.hash = '#/new'; resetGenView(); });
+    var rb = $('#genRetry');
+    if (rb) rb.addEventListener('click', function () { resetGenView(); renderStages(); generate(lastGenOpts); });
   }
+  var lastGenOpts = {};
   function resetGenView() {
     $('#view-generating .gen').innerHTML =
       '<div class="gen__spin" aria-hidden="true"></div><h2>Gerando sua página…</h2>' +

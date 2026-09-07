@@ -58,9 +58,17 @@ export default async function handler(req, res) {
 
   async function callAI({ system, user, temperature, maxTokens, budgetMs }) {
     const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), budgetMs);
+    let aborted = false;
+    const t = setTimeout(() => { aborted = true; ac.abort(); }, budgetMs);
     try {
       return await provider.chat({ system, user, temperature, maxTokens, signal: ac.signal, deadline: started + budgetMs - 3000, stream: true, onToken });
+    } catch (err) {
+      if (aborted || err.name === 'AbortError' || /aborted/i.test(err.message || '')) {
+        const e = new ProviderError('O servidor de IA (NVIDIA) demorou mais que o limite e a etapa foi cancelada. O endpoint gratuito da NVIDIA costuma entrar em fila em horários de pico — tente de novo em alguns minutos. Se persistir, use uma NVIDIA_API_KEY com cota de inferência maior ou defina NVIDIA_MODEL para um modelo mais rápido.', 504);
+        e.retriable = true;
+        throw e;
+      }
+      throw err;
     } finally { clearTimeout(t); }
   }
 
