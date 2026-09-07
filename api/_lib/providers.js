@@ -97,10 +97,6 @@ class NvidiaProvider extends AIProvider {
     };
     if (/nemotron/i.test(model)) {
       body.messages[0].content = `detailed thinking off\n\n${sys}`;
-      body.chat_template_kwargs = { thinking: false, enable_thinking: false };
-    } else if (/deepseek|kimi|qwen|glm|minimax|magistral/i.test(model)) {
-      body.chat_template_kwargs = { thinking: false, enable_thinking: false };
-      body.reasoning_effort = 'none';
     }
 
     let res;
