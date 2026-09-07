@@ -18,11 +18,9 @@ const DEFAULTS = {
 // geração de pé sem exigir novo deploy. Configure NVIDIA_MODEL para fixar um.
 // Verifique o catálogo vigente em GET /api/models.
 const NVIDIA_FALLBACKS = [
+  'nvidia/nemotron-3-ultra-550b-a55b',
   'nvidia/nemotron-3.5-lightning-30b-a3b',
-  'nvidia/nemotron-4-340b-instruct',
-  'deepseek-ai/deepseek-v4-pro-0813',
-  'moonshotai/kimi-k2.6',
-  'google/gemma-4-31b-it',
+  'deepseek-ai/deepseek-v4-flash-0731',
 ];
 
 /** Remove blocos de raciocínio que alguns modelos emitem antes da resposta. */
@@ -98,10 +96,11 @@ class NvidiaProvider extends AIProvider {
       stream: Boolean(stream),
     };
     if (/nemotron/i.test(model)) {
+      // Nemotron: toggle de raciocínio via system prompt.
       body.messages[0].content = `detailed thinking off\n\n${sys}`;
-    } else {
+    } else if (/deepseek|kimi|qwen3|glm/i.test(model)) {
+      // Alguns modelos aceitam este toggle; se não aceitarem, stripReasoning() limpa o resto.
       body.chat_template_kwargs = { thinking: false };
-      body.extra_body = { chat_template_kwargs: { thinking: false } };
     }
 
     let res;
