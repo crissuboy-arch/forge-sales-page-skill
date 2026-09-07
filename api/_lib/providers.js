@@ -23,6 +23,8 @@ const NVIDIA_FALLBACKS = [
   'deepseek-ai/deepseek-v4-flash-0731',
 ];
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 /** Remove blocos de raciocínio que alguns modelos emitem antes da resposta. */
 function stripReasoning(s) {
   let t = String(s || '');
@@ -184,18 +186,26 @@ class NvidiaProvider extends AIProvider {
     for (const model of models) {
       // Não começa uma nova tentativa se já não há tempo hábil (< 12s).
       if (deadline && Date.now() > deadline - 12000 && lastErr) break;
-      try {
-        return await this._callModel(model, { system, user, temperature, maxTokens, signal, stream, onToken });
-      } catch (err) {
-        lastErr = err;
-        if (err.fatal) throw err;
-        const retriable = err.status === 404 || err.status === 410
-          || (err.status === 400 && /model|not (found|available)|end of life|deprecat/i.test(err.detail || err.message || ''));
-        if (!retriable) throw err;
-        // senão: tenta o próximo modelo
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          return await this._callModel(model, { system, user, temperature, maxTokens, signal, stream, onToken });
+        } catch (err) {
+          lastErr = err;
+          if (err.fatal) throw err;
+          const overloaded = err.status === 500 || err.status === 502 || err.status === 503
+            || /overload|temporarily|try again|stream vazio|resposta vazia/i.test(err.message || '');
+          const wrongModel = err.status === 404 || err.status === 410
+            || (err.status === 400 && /model|not (found|available)|end of life|deprecat/i.test(err.detail || err.message || ''));
+          if (wrongModel) break; // próximo modelo
+          if (overloaded) {
+            if (attempt === 0 && (!deadline || Date.now() < deadline - 14000)) { await sleep(1200); continue; } // 1 retry no mesmo modelo
+            break; // próximo modelo
+          }
+          throw err; // erro não recuperável
+        }
       }
     }
-    throw lastErr || new ProviderError('Nenhum modelo NVIDIA disponível respondeu. Configure NVIDIA_MODEL com um modelo válido (veja /api/models).', 502);
+    throw lastErr || new ProviderError('O servidor de IA da NVIDIA está sobrecarregado (503) em todos os modelos tentados. É uma limitação de capacidade do endpoint gratuito integrate.api.nvidia.com — tente de novo em alguns minutos, ou use uma NVIDIA_API_KEY com cota de inferência dedicada.', 503);
   }
 }
 
