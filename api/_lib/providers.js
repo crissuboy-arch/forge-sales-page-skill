@@ -9,23 +9,22 @@
 const DEFAULTS = {
   nvidia: {
     baseUrl: 'https://integrate.api.nvidia.com/v1',
-    model: 'meta/llama-3.1-70b-instruct',
+    model: 'nvidia/nemotron-3.5-lightning-30b-a3b',
   },
 };
 
 // Modelos-candidato tentados em ordem quando o configurado sai de linha (410)
 // ou não existe (404). NVIDIA aposenta modelos com frequência; isto mantém a
 // geração de pé sem exigir novo deploy. Configure NVIDIA_MODEL para fixar um.
+// Verifique o catálogo vigente em GET /api/models.
 const NVIDIA_FALLBACKS = [
-  'moonshotai/kimi-k2-instruct',
-  'meta/llama-4-maverick-17b-128e-instruct',
-  'meta/llama-4-scout-17b-16e-instruct',
-  'qwen/qwen2.5-coder-32b-instruct',
-  'deepseek-ai/deepseek-v3.1',
-  'nvidia/llama-3.3-nemotron-super-49b-v1',
-  'meta/llama-3.3-70b-instruct',
+  'nvidia/nemotron-3-super-120b-a12b',
+  'deepseek-ai/deepseek-v4-flash-0731',
+  'moonshotai/kimi-k3',
+  'google/gemma-4-31b-it',
+  'mistralai/mistral-large-2-instruct',
+  'nvidia/llama-3.1-nemotron-70b-instruct',
   'meta/llama-3.1-70b-instruct',
-  'mistralai/mistral-small-24b-instruct',
 ];
 
 class MissingKeyError extends Error {
