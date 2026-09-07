@@ -65,6 +65,21 @@ export default async function handler(req, res) {
   }
 
   try {
+    // ---------------- PING (diagnóstico de latência do modelo) ----------------
+    if (step === 'ping') {
+      if (mock) return finish({ t: 'done', ok: true, meta: { model: 'mock', ms: 0 } });
+      const models = payload.model ? [payload.model] : provider.candidateModels().slice(0, 1);
+      const out = [];
+      for (const m of models) {
+        const s = Date.now();
+        try {
+          const rr = await provider._callModel(m, { system: 'Responda em uma frase.', user: 'Diga apenas: ok. Nada mais.', temperature: 0.1, maxTokens: 40, stream: false });
+          out.push({ model: m, ms: Date.now() - s, ok: true, sample: String(rr.content || '').slice(0, 40) });
+        } catch (e) { out.push({ model: m, ms: Date.now() - s, ok: false, error: String(e.message || e).slice(0, 160) }); }
+      }
+      return finish({ t: 'done', ok: true, results: out, meta: { ms: Date.now() - started } });
+    }
+
     // ---------------- ASSEMBLE (sem IA) ----------------
     if (step === 'assemble') {
       const plan = payload.plan || {};
