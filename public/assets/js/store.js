@@ -60,9 +60,24 @@
     };
   }
 
+  // settings: um único objeto (assinatura, contratante, padrões comerciais)
+  var SETTINGS_KEY = 'pageforge:settings:v1';
+  var settings = {
+    get: function () {
+      try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch (e) { return {}; }
+    },
+    set: function (patch) {
+      var cur = settings.get();
+      var next = Object.assign({}, cur, patch || {});
+      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)); } catch (e) {}
+      return next;
+    }
+  };
+
   global.PFStore = {
     leads: makeStore('pageforge:leads:v1', 'slug'),
     projects: makeStore('pageforge:projects:v1', 'id'),
+    settings: settings,
     make: makeStore
   };
 })(window);

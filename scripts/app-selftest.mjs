@@ -15,6 +15,8 @@ import { getProvider, listProviders } from '../api/_lib/providers.js';
 import { scoreLead, normalizeLead, leadToBriefing, slugify, LEAD_STATUS } from '../api/_lib/prospect.js';
 import { mockProspect, aisaConfigured } from '../api/_lib/aisa.js';
 import { impeccableQa } from '../api/_lib/impeccable-qa.js';
+import { buildProposal, buildEmailDraft, buildContract, gmailComposeUrl } from '../api/_lib/commercial.js';
+import { normStatus, pushHistory } from '../api/_lib/prospect.js';
 
 let pass = 0;
 const t = (name, fn) => {
@@ -266,6 +268,50 @@ t('impeccable: página bem-formada do assemble tem score alto', () => {
   const pp = postprocess(assemblePage(value, plan, secs), value);
   const r = impeccableQa(pp.html, value);
   assert.ok(r.score >= 15, `score baixo: ${r.score} — ${r.findings.map((f) => f.msg).join('; ')}`);
+});
+
+// ---------- FASE 3: pipeline + comercial ----------
+t('prospect: pipeline de status + aliases + histórico', () => {
+  assert.deepEqual(LEAD_STATUS[0], 'novo');
+  assert.equal(normStatus('publicado'), 'demo-publicada');
+  assert.equal(normStatus('lixo'), 'novo');
+  const h = pushHistory({ historico: [{ status: 'novo', at: 'x' }] }, 'qualificado');
+  assert.equal(h.length, 2);
+  assert.equal(h[1].status, 'qualificado');
+  assert.equal(pushHistory({ historico: [{ status: 'qualificado', at: 'x' }] }, 'qualificado').length, 1);
+});
+t('commercial: buildProposal usa dados reais, marca missing sem demo', () => {
+  const r = buildProposal({ nome: 'Clínica X', nicho: 'dentista', cidade: 'Porto', nota: 4.8, avaliacoes: 90, siteAntigo: 'https://x.pt', diagnostico: 'site datado' }, { settings: { assinaturaNome: 'Ana' } });
+  assert.ok(r.html.includes('Clínica X'));
+  assert.ok(r.html.includes('site datado'));
+  assert.ok(r.missing.some((m) => /demoUrl/.test(m)));
+  const r2 = buildProposal({ nome: 'Y', whatsapp: '+351911222333' }, { settings: { assinaturaNome: 'Ana' }, demoUrl: 'https://d/x' });
+  assert.ok(!r2.missing.length);
+  assert.ok(r2.html.includes('https://d/x'));
+});
+t('commercial: buildEmailDraft — assunto ≤60, 1 link, sem preço, sem inventar', () => {
+  const r = buildEmailDraft({ nome: 'Dr. João Silva', email: 'j@x.pt', nota: 5, avaliacoes: 40, diagnostico: 'sem versão mobile' }, { demoUrl: 'https://d/x' });
+  assert.ok(r.subject.length <= 60);
+  assert.ok(r.body.includes('https://d/x'));
+  assert.ok(!/R\$|€|preço|preço|valor/i.test(r.body));
+  assert.ok(r.gmailUrl.startsWith('https://mail.google.com/mail/'));
+  assert.ok(gmailComposeUrl('a@b.c', 'oi', 'texto').includes('to=a%40b.c'));
+});
+t('commercial: buildContract — só dados reais, missing para o resto', () => {
+  const r = buildContract({ nome: 'Cliente Z', cidade: 'Lisboa', siteAntigo: 'https://z.pt' }, { settings: {} });
+  assert.ok(r.missing.length >= 3);
+  assert.ok(r.html.includes('[SEU NOME]') || r.html.includes('mark'));
+  const r2 = buildContract({ nome: 'Cliente Z' }, { settings: { contratanteNome: 'Ana Dev', contratanteDoc: '123', contratanteCidade: 'Porto' }, preco: 'R$ 700', prazo: '10 dias', formaPagamento: '50% + 50%' });
+  assert.ok(!r2.missing.length);
+  assert.ok(r2.html.includes('R$ 700') && r2.html.includes('Ana Dev'));
+});
+t('blob: memória em modo mock (publica e recupera)', async () => {
+  process.env.PAGEFORGE_MOCK = '1';
+  const { putDemo, getDemoHtml, listDemos } = await import('../api/_lib/blob.js?mock=1');
+  await putDemo('teste-demo', '<html><body>demo</body></html>', 'Teste');
+  const got = await getDemoHtml('teste-demo');
+  assert.ok(got && got.includes('demo'));
+  assert.ok((await listDemos()).some((d) => d.slug === 'teste-demo'));
 });
 
 console.log(`\n${process.exitCode ? 'FALHOU' : 'OK'} — ${pass} testes passaram.`);

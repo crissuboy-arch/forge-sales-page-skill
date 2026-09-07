@@ -24,8 +24,11 @@ PUBLICAR DEMONSTRAÇÃO → GERAR PROPOSTA → CRM
 ```
 
 A Fase 1 entregou do início até **CRIAR NOVA VERSÃO → PageForge recebe os dados**.
-A **Fase 2** acrescenta: redesign → **Impeccable QA** → **editor visual** →
+A **Fase 2** acrescentou: redesign → **Impeccable QA** → **editor visual** →
 **antes × depois** → export.
+A **Fase 3** fecha o fluxo comercial: **publicar demo (URL pública)** →
+**proposta** → **rascunho de e-mail** → **CRM/pipeline** → **follow-up** →
+**contrato**.
 
 ---
 
@@ -124,14 +127,72 @@ seguras: `alt=""`, `viewport`, `prefers-reduced-motion`, `img{max-width:100%}`,
 `loading="lazy"`, remoção de kicker/eyebrow acima de heading (ban do craft-floor).
 Fluxo: **PageForge gera → postprocess → Impeccable QA → resultado final**.
 
+## Fase 3 — fluxo comercial (feito)
+
+### Publicar demo (`api/demo.js` · `api/demo-serve.js` · `api/_lib/blob.js`)
+Botão **PUBLICAR DEMO** no detalhe do lead → a última página gerada/editada
+ganha uma URL pública individual **`/demo/<slug>`** (rewrite no `vercel.json` →
+`/api/demo-serve`). Storage: **Vercel Blob** via REST, sem dependência
+(`BLOB_READ_WRITE_TOKEN`). A demo abre sem login, é mobile, preserva o redesign
+final editado, não expõe painel/editor, tem os CTAs funcionando, é
+**republicável** e marca o lead como `demo-publicada`. Sem token: degrada com
+mensagem clara + fallback de Exportar HTML/ZIP (não bloqueia o resto). Em dev
+(`PAGEFORGE_MOCK=1`) usa memória.
+
+### Proposta (`api/commercial.js` action `proposal`)
+**GERAR PROPOSTA** → HTML (template adaptado de
+`maquina-de-leads/modelos/capa-proposta-template.html`) pré-preenchido com dados
+reais: empresa, nicho, cidade, diagnóstico, oportunidade, **URL da demo** (com
+preview), contatos. Estrutura: SITE ATUAL → problema/oportunidade → NOVA VERSÃO →
+URL → o que está incluído → próximo passo (WhatsApp). **Editável** antes de usar.
+Preço só se configurado (`precoPadrao`); nunca inventado. Pode ser publicada como
+demo própria.
+
+### Rascunho de e-mail (`api/commercial.js` action `email`)
+**CRIAR RASCUNHO DE E-MAIL** — NÃO envia. Gera assunto (≤60 car.) + corpo
+personalizado (rapport com a nota real, 1–2 defeitos objetivos, **1 link só**,
+zero preço, assinatura do config), com **link do Gmail Compose** e `mailto:`
+como fallback. "Marcar como enviada" → status `proposta-enviada` + follow-up +3d.
+Gmail API: preparado, não configurado — não bloqueia nada.
+
+### CRM / Pipeline (`api/_lib/prospect.js` · `public/assets/js/commercial.js`)
+Pipeline: `novo → qualificado → redesign-criado → demo-publicada →
+proposta-pronta → proposta-enviada → follow-up → negociacao → fechado / perdido`
+(aliases dos status antigos preservados). Cada mudança grava
+`lead.historico[{status, at, nota}]`. Por lead: observações, próxima ação, data
+de follow-up, link da demo, proposta, contrato, contatos. Sem CRM empresarial.
+
+### Follow-up (`#/followups`)
+Lista os leads com `proximaAcaoData` vencida ou em `proposta-enviada`/`follow-up`
+sem data. Botão de rascunho de follow-up (Gmail) + "marcar feito". Sem disparo
+automático.
+
+### Contrato (`api/commercial.js` action `contract`)
+**GERAR CONTRATO** — minuta (template adaptado de
+`maquina-de-leads/modelos/contrato-template.html`). Pré-preenche só dados reais
+(cliente do lead + `contratante*` e padrões do config). O que falta aparece em
+`missing` + campos manuais na interface e fica <mark>destacado</mark> no
+documento. Sem assinatura eletrônica. Editável, salva no lead, abre para
+imprimir/PDF.
+
+### Dashboard
+KPIs do funil completo: Encontrados · Qualificados · Redesigns · Demos
+publicadas · Propostas prontas · Propostas enviadas · Follow-ups · Negociações ·
+Fechados. Cada um linka para a lista/seção.
+
+### Configurações
+Aba com os campos de assinatura (nome, apresentação, WhatsApp, domínio) e
+contrato (razão social, CPF/CNPJ, endereço, cidade) + padrões (preço, prazo,
+forma de pagamento). Só no navegador.
+
 ### Pendente (fases seguintes — NÃO fazer agora)
 
-- [ ] publicação na Vercel da demonstração do lead
-- [ ] proposta por Gmail
-- [ ] CRM avançado (follow-up, agenda, histórico)
-- [ ] provider de IA definitivo (NVIDIA + Gemini/OpenAI/Groq — a camada
-      `api/_lib/providers.js` já está preparada)
-- [ ] armazenamento em nuvem (o adapter `PFStore` já isola isso)
+- [ ] envio automático de e-mail (Gmail API) — hoje é rascunho manual
+- [ ] assinatura eletrônica do contrato
+- [ ] domínio próprio para a demo (hoje `<host>/demo/<slug>`)
+- [ ] provider de IA definitivo (NVIDIA + Gemini/OpenAI/Groq — `api/_lib/providers.js` pronto)
+- [ ] armazenamento em nuvem dos leads/projetos (o adapter `PFStore` já isola isso)
+- [ ] auditoria final completa
 
 ---
 

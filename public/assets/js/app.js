@@ -52,7 +52,8 @@
   var VIEWS = {
     '': 'view-home', '/': 'view-home', '/new': 'view-new', '/preview': 'view-preview', '/generating': 'view-generating',
     '/compare': 'view-compare',
-    '/prospeccao': 'view-prospeccao', '/leads': 'view-leads', '/lead': 'view-lead', '/projetos': 'view-projetos', '/config': 'view-config'
+    '/prospeccao': 'view-prospeccao', '/leads': 'view-leads', '/lead': 'view-lead', '/followups': 'view-followups',
+    '/projetos': 'view-projetos', '/config': 'view-config'
   };
   function route() {
     var hash = location.hash.replace(/^#/, '') || '/';
@@ -87,11 +88,12 @@
 
   /* ------------------------------------------------- health (páginas + prospecção) */
   function checkHealth() {
-    health = { pages: {}, prospect: {} };
+    health = { pages: {}, prospect: {}, demo: {} };
     var jget = function (u) { return fetch(u).then(function (r) { return r.json(); }).catch(function () { return {}; }); };
-    Promise.all([jget('/api/health'), jget('/api/prospect')]).then(function (r) {
+    Promise.all([jget('/api/health'), jget('/api/prospect'), jget('/api/demo')]).then(function (r) {
       health.pages = r[0] || {};
       health.prospect = r[1] || {};
+      health.demo = r[2] || {};
       var hp = health.pages, pr = health.prospect;
       var fm = $('#footModel'); if (fm && hp.model) fm.textContent = 'NVIDIA · ' + hp.model;
       var hs = $('#homeStatus');
@@ -660,7 +662,12 @@
       leadNome: state.leadSource && state.leadSource.nome || null
     };
     try { window.PFStore && PFStore.projects.upsert(proj); } catch (e) {}
-    if (proj.leadSlug) { try { PFStore.leads.upsert({ slug: proj.leadSlug, status: 'redesenhado' }); } catch (e) {} }
+    if (proj.leadSlug) {
+      try {
+        if (window.PFProspect && PFProspect.setLeadStatus) PFProspect.setLeadStatus(proj.leadSlug, 'redesign-criado', 'redesign gerado');
+        else PFStore.leads.upsert({ slug: proj.leadSlug, status: 'redesign-criado' });
+      } catch (e) {}
+    }
     state.currentProjectId = id;
     if (window.PFProspect) PFProspect.renderKpis();
   }

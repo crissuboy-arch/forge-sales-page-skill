@@ -32,6 +32,7 @@
       <a href="#/new" data-route="/new">Criar Página</a>
       <a href="#/prospeccao" data-route="/prospeccao">Prospecção</a>
       <a href="#/leads" data-route="/leads">Leads</a>
+      <a href="#/followups" data-route="/followups">Follow-ups</a>
       <a href="#/projetos" data-route="/projetos">Projetos</a>
       <a href="#/config" data-route="/config">Configurações</a>
     </nav>
@@ -131,6 +132,15 @@
     <div class="container lead-detail" id="leadDetail"></div>
   </section>
 
+  <!-- ===================== FOLLOW-UPS ===================== -->
+  <section class="view" id="view-followups">
+    <div class="container">
+      <h1>Follow-ups</h1>
+      <p class="panel__lead" id="followupsCount">—</p>
+      <div class="leads-list" id="followupsList"></div>
+    </div>
+  </section>
+
   <!-- ===================== ANTES × DEPOIS ===================== -->
   <section class="view" id="view-compare">
     <div class="container compare">
@@ -168,8 +178,13 @@
         <p class="tiny muted">As chaves (<code>NVIDIA_API_KEY</code> para páginas, <code>AISA_KEY</code> para prospecção) ficam apenas no servidor, nas Environment Variables da Vercel. Nunca no navegador nem no repositório.</p>
       </div>
       <div class="panel">
-        <h2>Dados</h2>
-        <p class="tiny muted">Leads e projetos ficam neste navegador (localStorage). A arquitetura tem um adapter de armazenamento pronto para migrar para nuvem numa fase seguinte, sem reescrever a interface.</p>
+        <h2>Seus dados (proposta, e-mail, contrato)</h2>
+        <p class="panel__lead">Usados para preencher automaticamente a proposta e o contrato. Ficam só neste navegador.</p>
+        <div id="cfgSettings"></div>
+      </div>
+      <div class="panel">
+        <h2>Dados locais</h2>
+        <p class="tiny muted">Leads e projetos ficam neste navegador (localStorage). O adapter de armazenamento está pronto para migrar para nuvem depois, sem reescrever a interface.</p>
         <button class="btn btn--ghost btn--sm" id="btnExportData">Exportar dados (JSON)</button>
         <button class="btn btn--ghost btn--sm" id="btnClearData">Limpar dados locais</button>
       </div>
@@ -365,6 +380,7 @@
 <script src="/assets/js/store.js"></script>
 <script src="/assets/js/editor.js"></script>
 <script src="/assets/js/prospect.js"></script>
+<script src="/assets/js/commercial.js"></script>
 <script src="/assets/js/app.js"></script>
 </body>
 </html>

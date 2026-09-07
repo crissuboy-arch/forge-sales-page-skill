@@ -8,9 +8,29 @@
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
   var ctx = null; // { toast, toBuilder, go, health }
-  var STATUS = ['novo', 'contatado', 'em-criacao', 'redesenhado', 'publicado', 'proposta', 'fechado', 'descartado'];
-  var STATUS_LABEL = { novo: 'Novo', contatado: 'Contatado', 'em-criacao': 'Em criação', redesenhado: 'Redesenhado', publicado: 'Publicado', proposta: 'Proposta enviada', fechado: 'Fechado', descartado: 'Descartado' };
+  var STATUS = ['novo', 'qualificado', 'redesign-criado', 'demo-publicada', 'proposta-pronta', 'proposta-enviada', 'follow-up', 'negociacao', 'fechado', 'perdido'];
+  var STATUS_LABEL = { novo: 'Novo', qualificado: 'Qualificado', 'redesign-criado': 'Redesign criado', 'demo-publicada': 'Demo publicada', 'proposta-pronta': 'Proposta pronta', 'proposta-enviada': 'Proposta enviada', 'follow-up': 'Follow-up', negociacao: 'Negociação', fechado: 'Fechado', perdido: 'Perdido' };
+  var STATUS_ALIAS = { contatado: 'qualificado', 'em-criacao': 'redesign-criado', redesenhado: 'redesign-criado', publicado: 'demo-publicada', proposta: 'proposta-pronta', descartado: 'perdido' };
+  function normStatus(s) { s = String(s || ''); return STATUS.indexOf(s) > -1 ? s : (STATUS_ALIAS[s] || 'novo'); }
+  function statusLabel(s) { return STATUS_LABEL[normStatus(s)]; }
   var leadsFilterStatus = '';
+
+  // muda status + registra histórico + campos derivados
+  function setLeadStatus(slug, status, nota) {
+    var l = PFStore.leads.get(slug); if (!l) return null;
+    status = normStatus(status);
+    var hist = Array.isArray(l.historico) ? l.historico.slice() : [];
+    if (!hist.length || hist[hist.length - 1].status !== status || nota) hist.push({ status: status, at: new Date().toISOString(), nota: nota || '' });
+    var patch = { slug: slug, status: status, historico: hist };
+    if (status === 'proposta-enviada' && !l.proximaAcaoData) {
+      var d = new Date(); d.setDate(d.getDate() + 3);
+      patch.proximaAcaoData = d.toISOString().slice(0, 10);
+      patch.proximaAcao = 'Follow-up da proposta';
+    }
+    PFStore.leads.upsert(patch);
+    if (ctx && ctx.refreshKpis) ctx.refreshKpis();
+    return PFStore.leads.get(slug);
+  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -130,8 +150,9 @@
 
   /* ---------------- lead -> builder ---------------- */
   function toBuilderFromLead(lead) {
-    // garante que está salvo e marca status
-    PFStore.leads.upsert(Object.assign({}, lead, { status: 'em-criacao' }));
+    // garante que está salvo e marca como qualificado (entrou no funil)
+    if (!PFStore.leads.get(lead.slug)) PFStore.leads.upsert(Object.assign({}, lead, { status: 'novo' }));
+    setLeadStatus(lead.slug, 'qualificado', 'enviado para o builder');
     ctx.refreshKpis();
     ctx.toast('Preparando briefing de ' + lead.nome + '…');
     apiProspect({ action: 'to-briefing', lead: lead }).then(function (res) {
@@ -169,9 +190,10 @@
   function renderLeadsView() {
     var fw = $('#leadsFilter');
     var counts = { '': PFStore.leads.count() };
-    PFStore.leads.list().forEach(function (l) { counts[l.status] = (counts[l.status] || 0) + 1; });
-    fw.innerHTML = ['', 'novo', 'contatado', 'em-criacao', 'redesenhado', 'publicado', 'descartado'].map(function (s) {
+    PFStore.leads.list().forEach(function (l) { var s = normStatus(l.status); counts[s] = (counts[s] || 0) + 1; });
+    fw.innerHTML = [''].concat(STATUS).map(function (s) {
       var n = counts[s] || 0;
+      if (s && !n && leadsFilterStatus !== s) return '';
       return '<button class="lead-filter-b' + (leadsFilterStatus === s ? ' is-on' : '') + '" data-status="' + s + '">' +
         (s ? STATUS_LABEL[s] : 'Todos') + ' <b>' + n + '</b></button>';
     }).join('');
@@ -180,8 +202,8 @@
     });
 
     var all = PFStore.leads.list();
-    var list = leadsFilterStatus ? all.filter(function (l) { return l.status === leadsFilterStatus; }) : all;
-    list.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+    var list = leadsFilterStatus ? all.filter(function (l) { return normStatus(l.status) === leadsFilterStatus; }) : all;
+    list.sort(function (a, b) { return (STATUS.indexOf(normStatus(b.status)) - STATUS.indexOf(normStatus(a.status))) || (b.score || 0) - (a.score || 0); });
     $('#leadsCount').textContent = list.length + ' lead(s)' + (leadsFilterStatus ? ' · ' + STATUS_LABEL[leadsFilterStatus] : '');
     var wrap = $('#leadsList');
     if (!all.length) {
@@ -196,9 +218,7 @@
         var l = PFStore.leads.get(slug); if (l) toBuilderFromLead(l);
       });
       var sel = row.querySelector('select');
-      sel.addEventListener('change', function () {
-        PFStore.leads.upsert({ slug: slug, status: sel.value }); ctx.refreshKpis(); renderLeadsView();
-      });
+      sel.addEventListener('change', function () { setLeadStatus(slug, sel.value); renderLeadsView(); });
     });
   }
 
@@ -214,7 +234,7 @@
         (l.diagnostico ? '<li>' + esc(l.diagnostico) + '</li>' : '') +
       '</ul>' +
       '<div class="lead-card__actions">' +
-        '<label class="lead-status">Status <select>' + STATUS.map(function (s) { return '<option value="' + s + '"' + (l.status === s ? ' selected' : '') + '>' + STATUS_LABEL[s] + '</option>'; }).join('') + '</select></label>' +
+        '<label class="lead-status">Status <select>' + STATUS.map(function (s) { return '<option value="' + s + '"' + (normStatus(l.status) === s ? ' selected' : '') + '>' + STATUS_LABEL[s] + '</option>'; }).join('') + '</select></label>' +
         '<button class="chip" data-act="open">Abrir</button>' +
         '<button class="btn btn--primary btn--sm" data-act="build">Criar nova versão</button>' +
       '</div>' +
@@ -249,13 +269,13 @@
         '</dl>' +
       '</div>' +
       '<div class="lead-card__actions">' +
-        '<label class="lead-status">Status <select id="ldStatus">' + STATUS.map(function (s) { return '<option value="' + s + '"' + (l.status === s ? ' selected' : '') + '>' + STATUS_LABEL[s] + '</option>'; }).join('') + '</select></label>' +
         '<button class="btn btn--ghost btn--sm" id="ldRemove">Remover lead</button>' +
         '<button class="btn btn--primary" id="ldBuild">CRIAR NOVA VERSÃO</button>' +
-      '</div>';
-    $('#ldStatus').addEventListener('change', function () { PFStore.leads.upsert({ slug: slug, status: this.value }); ctx.refreshKpis(); ctx.toast('Status atualizado.'); });
+      '</div>' +
+      '<div id="ldCommercial"></div>';
     $('#ldRemove').addEventListener('click', function () { if (confirm('Remover ' + l.nome + '?')) { PFStore.leads.remove(slug); ctx.refreshKpis(); location.hash = '#/leads'; } });
     $('#ldBuild').addEventListener('click', function () { toBuilderFromLead(PFStore.leads.get(slug)); });
+    if (window.PFCommercial) PFCommercial.renderPanel(slug, $('#ldCommercial'));
   }
 
   /* ---------------- PROJETOS ---------------- */
@@ -277,12 +297,40 @@
   }
 
   /* ---------------- CONFIG ---------------- */
+  var SETTINGS_FIELDS = [
+    ['assinaturaNome', 'Seu nome / marca', 'text'],
+    ['assinaturaApresentacao', 'Apresentação curta', 'text'],
+    ['assinaturaWhatsapp', 'Seu WhatsApp (com DDI)', 'text'],
+    ['dominio', 'Seu domínio (opcional)', 'text'],
+    ['precoPadrao', 'Preço padrão (opcional)', 'text'],
+    ['prazoPadrao', 'Prazo padrão (ex.: 10 dias)', 'text'],
+    ['formaPagamento', 'Forma de pagamento', 'text'],
+    ['contratanteNome', 'Contrato — seu nome/razão social', 'text'],
+    ['contratanteDoc', 'Contrato — seu CPF/CNPJ/NIF', 'text'],
+    ['contratanteEndereco', 'Contrato — seu endereço', 'text'],
+    ['contratanteCidade', 'Contrato — sua cidade/UF', 'text']
+  ];
   function renderConfig(health) {
     var h = health || {};
-    var pg = h.pages || {}; var pr = h.prospect || {};
+    var pg = h.pages || {}; var pr = h.prospect || {}; var dm = h.demo || {};
     $('#cfgEngines').innerHTML =
       '<dt>Criador de Páginas (IA)</dt><dd>' + (pg.ready ? ('✅ ' + esc(pg.provider || 'NVIDIA') + (pg.model ? ' · ' + esc(pg.model) : '')) : '⚠️ NVIDIA_API_KEY pendente' + (pg.mock ? ' (modo exemplo)' : '')) + '</dd>' +
-      '<dt>Prospecção (AIsa)</dt><dd>' + (pr.ready ? (pr.keyConfigured ? '✅ AISA_KEY configurada' : '🧪 modo exemplo (sem AISA_KEY)') : '⚠️ AISA_KEY pendente') + '</dd>';
+      '<dt>Prospecção (AIsa)</dt><dd>' + (pr.ready ? (pr.keyConfigured ? '✅ AISA_KEY configurada' : '🧪 modo exemplo (sem AISA_KEY)') : '⚠️ AISA_KEY pendente') + '</dd>' +
+      '<dt>Publicação de demos (Vercel Blob)</dt><dd>' + (dm.keyConfigured ? '✅ BLOB_READ_WRITE_TOKEN configurado' : (dm.mock ? '🧪 modo dev (memória)' : '⚠️ BLOB_READ_WRITE_TOKEN pendente — use Exportar HTML/ZIP')) + '</dd>' +
+      '<dt>E-mail</dt><dd>Rascunho via Gmail Compose / mailto (envio manual). Integração Gmail API: preparada, não configurada.</dd>';
+
+    var sc = $('#cfgSettings');
+    if (sc) {
+      var s = PFStore.settings.get();
+      sc.innerHTML = SETTINGS_FIELDS.map(function (f) {
+        return '<div class="field"><label>' + f[1] + '<input type="' + f[2] + '" data-s="' + f[0] + '" value="' + esc(s[f[0]] || '') + '"></label></div>';
+      }).join('') + '<button class="btn btn--primary btn--sm" id="cfgSave">Salvar configurações</button>';
+      $('#cfgSave').onclick = function () {
+        var patch = {};
+        $$('[data-s]', sc).forEach(function (i) { patch[i.dataset.s] = i.value.trim(); });
+        PFStore.settings.set(patch); ctx.toast('Configurações salvas.');
+      };
+    }
     $('#btnExportData').onclick = function () {
       var data = { leads: PFStore.leads.list(), projects: PFStore.projects.list().map(function (p) { return { id: p.id, name: p.name, pageType: p.pageType, atualizado: p.atualizado }; }) };
       var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -295,20 +343,85 @@
     };
   }
 
-  /* ---------------- KPIs ---------------- */
-  function renderKpis() {
+  /* ---------------- KPIs / funil ---------------- */
+  function funnel() {
     var leads = PFStore.leads.list();
-    var quentes = leads.filter(function (l) { return l.temperatura === 'quente'; }).length;
-    var comSite = leads.filter(function (l) { return l.siteAntigo; }).length;
+    var by = function (fn) { return leads.filter(fn).length; };
+    var reached = function (st) {
+      var idx = STATUS.indexOf(st);
+      return by(function (l) {
+        var i = STATUS.indexOf(normStatus(l.status));
+        var hist = (l.historico || []).some(function (h) { return STATUS.indexOf(h.status) >= idx; });
+        return i >= idx || hist;
+      });
+    };
+    return {
+      encontrados: leads.length,
+      qualificados: reached('qualificado'),
+      redesigns: PFStore.projects.count(),
+      demos: reached('demo-publicada'),
+      propostasProntas: reached('proposta-pronta'),
+      propostasEnviadas: reached('proposta-enviada'),
+      followups: leadsPrecisamFollowup().length,
+      negociacoes: by(function (l) { return normStatus(l.status) === 'negociacao'; }),
+      fechados: by(function (l) { return normStatus(l.status) === 'fechado'; }),
+      quentes: by(function (l) { return l.temperatura === 'quente'; })
+    };
+  }
+  function leadsPrecisamFollowup() {
+    var hoje = new Date().toISOString().slice(0, 10);
+    return PFStore.leads.list().filter(function (l) {
+      if (['fechado', 'perdido'].indexOf(normStatus(l.status)) > -1) return false;
+      if (l.proximaAcaoData && l.proximaAcaoData <= hoje) return true;
+      return ['proposta-enviada', 'follow-up'].indexOf(normStatus(l.status)) > -1 && !l.proximaAcaoData;
+    });
+  }
+  function renderKpis() {
     var el = $('#kpis'); if (!el) return;
+    var fn = funnel();
     el.innerHTML = [
-      ['Leads', leads.length, '#/leads'],
-      ['Oportunidades 🔥', quentes, '#/leads'],
-      ['Com site (redesign)', comSite, '#/leads'],
-      ['Páginas criadas', PFStore.projects.count(), '#/projetos']
+      ['Encontrados', fn.encontrados, '#/leads'],
+      ['Qualificados', fn.qualificados, '#/leads'],
+      ['Redesigns', fn.redesigns, '#/projetos'],
+      ['Demos publicadas', fn.demos, '#/leads'],
+      ['Propostas prontas', fn.propostasProntas, '#/leads'],
+      ['Propostas enviadas', fn.propostasEnviadas, '#/leads'],
+      ['Follow-ups', fn.followups, '#/followups'],
+      ['Negociações', fn.negociacoes, '#/leads'],
+      ['Fechados', fn.fechados, '#/leads']
     ].map(function (k) {
       return '<a class="kpi" href="' + k[2] + '"><span class="kpi__n">' + k[1] + '</span><span class="kpi__l">' + k[0] + '</span></a>';
     }).join('');
+  }
+
+  function renderFollowups() {
+    var wrap = $('#followupsList'); if (!wrap) return;
+    var list = leadsPrecisamFollowup().sort(function (a, b) { return (a.proximaAcaoData || '9999') < (b.proximaAcaoData || '9999') ? -1 : 1; });
+    $('#followupsCount').textContent = list.length + ' lead(s) para acompanhar';
+    if (!list.length) { wrap.innerHTML = notice('ok', 'Nenhum follow-up pendente. 👍'); return; }
+    var hoje = new Date().toISOString().slice(0, 10);
+    wrap.innerHTML = '<div class="lead-cards">' + list.map(function (l) {
+      var atrasado = l.proximaAcaoData && l.proximaAcaoData < hoje;
+      return '<article class="lead-card"><div class="lead-card__top"><div>' +
+        '<h3>' + esc(l.nome) + '</h3><p class="lead-card__meta">' + esc(statusLabel(l.status)) + (l.demoUrl ? ' · demo publicada' : '') + '</p></div>' +
+        '<span class="temp temp--' + (atrasado ? 'quente' : 'morno') + '">' + (l.proximaAcaoData ? (atrasado ? 'atrasado ' : '') + l.proximaAcaoData : 'sem data') + '</span></div>' +
+        '<ul class="lead-card__facts">' +
+          (l.proximaAcao ? '<li>Próxima ação: ' + esc(l.proximaAcao) + '</li>' : '') +
+          (l.observacoes ? '<li>' + esc(l.observacoes.slice(0, 140)) + '</li>' : '') +
+        '</ul>' +
+        '<div class="lead-card__actions">' +
+          (l.email ? '<a class="chip" target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(l.email) + '&su=' + encodeURIComponent('Conseguiu ver a página, ' + (l.nome || '').split(' ')[0] + '?') + '&body=' + encodeURIComponent('Olá! Te escrevi há alguns dias sobre a nova versão do site. Conseguiu dar uma olhada? ' + (l.demoUrl || '') + '\n\nQualquer dúvida, estou por aqui.') + '">Rascunho de follow-up</a>' : (l.whatsapp ? '<a class="chip" target="_blank" rel="noopener" href="https://wa.me/' + digits(l.whatsapp) + '">WhatsApp</a>' : '')) +
+          '<button class="chip" data-done="' + esc(l.slug) + '">Marcar feito</button>' +
+          '<button class="btn btn--primary btn--sm" data-open="' + esc(l.slug) + '">Abrir lead</button>' +
+        '</div></article>';
+    }).join('') + '</div>';
+    $$('[data-open]', wrap).forEach(function (b) { b.addEventListener('click', function () { location.hash = '#/lead/' + b.dataset.open; }); });
+    $$('[data-done]', wrap).forEach(function (b) { b.addEventListener('click', function () {
+      var l = PFStore.leads.get(b.dataset.done);
+      var hist = (l.historico || []).concat([{ status: normStatus(l.status), at: new Date().toISOString(), nota: 'follow-up feito' }]);
+      PFStore.leads.upsert({ slug: b.dataset.done, status: 'follow-up', historico: hist, proximaAcaoData: '', proximaAcao: '' });
+      ctx.refreshKpis(); renderFollowups();
+    }); });
   }
 
   /* ---------------- helpers ---------------- */
@@ -322,8 +435,17 @@
       else if (route === '/lead') { renderLeadDetail(param); }
       else if (route === '/projetos') { renderProjetos(); }
       else if (route === '/config') { renderConfig(health); }
-      if (route === '/' ) renderKpis();
+      else if (route === '/followups') { renderFollowups(); }
+      if (route === '/') renderKpis();
     },
-    renderKpis: renderKpis
+    renderKpis: renderKpis,
+    renderFollowups: renderFollowups,
+    renderLeadDetail: renderLeadDetail,
+    setLeadStatus: setLeadStatus,
+    statusLabel: statusLabel,
+    normStatus: normStatus,
+    STATUS: STATUS,
+    STATUS_LABEL: STATUS_LABEL,
+    getCtx: function () { return ctx; }
   };
 })(window);

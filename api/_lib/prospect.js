@@ -9,9 +9,32 @@ export const LEAD_FIELDS = [
   'instagram', 'igSeguidores', 'igPosts', 'igAtivo', 'igCategoria',
   'siteAntigo', 'motivo', 'diagnostico', 'score', 'temperatura', 'abordagem',
   'status', 'endereco', 'obs', 'busca', 'criado', 'atualizado',
+  // Fase 3 — pipeline comercial
+  'historico', 'observacoes', 'proximaAcao', 'proximaAcaoData',
+  'demoUrl', 'demoSlug', 'demoPublishedAt', 'propostaHtml', 'emailDraft', 'contratoHtml',
 ];
 
-export const LEAD_STATUS = ['novo', 'contatado', 'em-criacao', 'redesenhado', 'publicado', 'proposta', 'fechado', 'descartado'];
+// Pipeline comercial (Fase 3).
+export const LEAD_STATUS = ['novo', 'qualificado', 'redesign-criado', 'demo-publicada', 'proposta-pronta', 'proposta-enviada', 'follow-up', 'negociacao', 'fechado', 'perdido'];
+export const LEAD_STATUS_LABEL = {
+  novo: 'Novo', qualificado: 'Qualificado', 'redesign-criado': 'Redesign criado', 'demo-publicada': 'Demo publicada',
+  'proposta-pronta': 'Proposta pronta', 'proposta-enviada': 'Proposta enviada', 'follow-up': 'Follow-up',
+  negociacao: 'Negociação', fechado: 'Fechado', perdido: 'Perdido',
+};
+const STATUS_ALIASES = { contatado: 'qualificado', 'em-criacao': 'redesign-criado', redesenhado: 'redesign-criado', publicado: 'demo-publicada', proposta: 'proposta-pronta', descartado: 'perdido' };
+export function normStatus(s) {
+  const v = String(s || '').trim();
+  return LEAD_STATUS.includes(v) ? v : (STATUS_ALIASES[v] || 'novo');
+}
+/** Anexa uma entrada ao histórico de status do lead (imutável). */
+export function pushHistory(lead, status, nota) {
+  const h = Array.isArray(lead.historico) ? lead.historico.slice() : [];
+  const st = normStatus(status);
+  if (!h.length || h[h.length - 1].status !== st || nota) {
+    h.push({ status: st, at: new Date().toISOString(), nota: nota || '' });
+  }
+  return h;
+}
 
 const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g');
 export function slugify(s) {
@@ -79,8 +102,9 @@ export function normalizeLead(raw = {}, busca = '') {
   lead.motivo = String(raw.motivo || '').slice(0, 300);
   lead.diagnostico = String(raw.diagnostico || raw.motivo || '').slice(0, 400);
   lead.busca = busca || raw.busca || `${lead.nicho} em ${lead.cidade}`.trim();
-  lead.status = LEAD_STATUS.includes(raw.status) ? raw.status : 'novo';
+  lead.status = normStatus(raw.status);
   lead.slug = raw.slug || slugify(`${lead.nome}-${lead.cidade}`);
+  lead.historico = Array.isArray(raw.historico) ? raw.historico : [{ status: lead.status, at: new Date().toISOString(), nota: '' }];
 
   if (!lead.diagnostico) {
     const h = heuristicDiagnosis(lead);

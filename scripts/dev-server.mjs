@@ -43,6 +43,17 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   let pathname = decodeURIComponent(url.pathname);
 
+  // espelha os rewrites do vercel.json em dev
+  const demoM = pathname.match(/^\/demo\/([^/]+)\/?$/);
+  if (demoM) {
+    const handler = await loadHandler('demo-serve');
+    if (handler) {
+      req.url = `/api/demo-serve?slug=${encodeURIComponent(demoM[1])}`;
+      try { await handler(req, res); } catch (err) { if (!res.headersSent) res.statusCode = 500; res.end(String(err && err.message || err)); }
+      return;
+    }
+  }
+
   if (pathname.startsWith('/api/')) {
     const name = pathname.slice(5).replace(/\/$/, '');
     const handler = await loadHandler(name);

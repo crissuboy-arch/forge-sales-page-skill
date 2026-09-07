@@ -373,3 +373,22 @@ body:has(.pf-ed-bar) .topbar { display: none; }
   .compare-cols { grid-template-columns: 1fr; }
   .compare-cols[data-mode="lado"] .compare-col iframe { height: 50vh; }
 }
+
+/* ========================================================================
+   PIPELINE COMERCIAL  (Fase 3)
+   ======================================================================== */
+.kpis { grid-template-columns: repeat(9, 1fr); }
+.pipeline-bar { display: flex; flex-wrap: wrap; gap: .3rem; }
+.pipe { font: 600 .78rem/1 var(--font); border: 1px solid var(--line); background: #fff; color: var(--text-soft); border-radius: 999px; padding: .4rem .7rem; cursor: pointer; }
+.pipe.done { color: var(--emerald-deep); border-color: #a7f3d0; background: #ecfdf5; }
+.pipe.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.cm-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .8rem 0 .2rem; }
+.cm-ok { font-size: .9rem; }
+.cm-hist { margin-top: .8rem; font-size: .84rem; }
+.cm-hist summary { cursor: pointer; font-weight: 600; color: var(--text-soft); }
+.cm-hist ul { margin: .4rem 0 0; padding-left: 1.1rem; color: var(--text-soft); }
+#ldCommercial .panel { margin-top: 1.2rem; }
+#cmProposalBox, #cmEmailBox, #cmContractBox, #cmDemoMsg { margin-top: .6rem; }
+
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .kpis { grid-template-columns: 1fr 1fr; } }

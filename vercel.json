@@ -8,6 +8,9 @@
   "functions": {
     "api/*.js": { "maxDuration": 60 }
   },
+  "rewrites": [
+    { "source": "/demo/:slug", "destination": "/api/demo-serve?slug=:slug" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
