@@ -229,3 +229,87 @@ main { flex: 1; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* ========================================================================
+   PROSPECÇÃO / LEADS / DASHBOARD  (Fase 1 — Máquina de Leads integrada)
+   ======================================================================== */
+.topbar__in { gap: 1rem; }
+.mainnav { display: flex; gap: .2rem; margin-left: auto; margin-right: .5rem; }
+.mainnav a {
+  font-size: .88rem; font-weight: 600; color: var(--text-soft); text-decoration: none;
+  padding: .5rem .7rem; border-radius: 8px; white-space: nowrap;
+}
+.mainnav a:hover { color: var(--ink); background: var(--bg); }
+.mainnav a.is-on { color: var(--emerald-deep); background: #ecfdf5; }
+.navtoggle { display: none; background: none; border: 1px solid var(--line); border-radius: 8px; font-size: 1.1rem; width: 40px; height: 40px; cursor: pointer; }
+
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 1rem; }
+
+/* KPIs */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin: 1.5rem 0 2rem; }
+.kpi { background: var(--surface); padding: 1.1rem 1.2rem; text-decoration: none; display: flex; flex-direction: column; gap: .2rem; }
+.kpi:hover { background: #fbfdfc; }
+.kpi__n { font-size: 1.9rem; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+.kpi__l { font-size: .82rem; color: var(--text-soft); font-weight: 600; }
+
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 3rem; }
+.dash-card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4rem 1.5rem; text-decoration: none; box-shadow: var(--shadow-1); transition: transform .12s var(--ease), border-color .12s; }
+.dash-card:hover { transform: translateY(-2px); border-color: var(--ink); }
+.dash-card h3 { font-size: 1.1rem; color: var(--ink); margin-bottom: .4rem; }
+.dash-card p { font-size: .9rem; color: var(--text-soft); margin: 0 0 .8rem; }
+.dash-card__go { font-size: .85rem; font-weight: 700; color: var(--emerald-deep); }
+
+/* prospecção */
+.prospect h1, #view-leads h1, #view-projetos h1, #view-config h1, .lead-detail h1 { font-size: clamp(1.6rem, 1.3rem + 1.4vw, 2.2rem); margin-top: 1.2rem; }
+.prospect { padding-bottom: 4rem; }
+.prospect-form { margin: 1.2rem 0 1.5rem; }
+.prospect-form .btn { margin-top: .4rem; }
+.prospect-adv summary { cursor: pointer; font-size: .86rem; font-weight: 600; color: var(--text-soft); margin: .3rem 0; }
+.prospect-status { font-size: .85rem; color: var(--text-soft); margin-left: .8rem; }
+.prospect-loading { text-align: center; padding: 2.5rem 0; }
+.prospect-loading .gen__spin { margin: 0 auto 1rem; }
+.results-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin: 1.5rem 0 .8rem; font-size: .9rem; }
+
+.lead-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.lead-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; box-shadow: var(--shadow-1); display: flex; flex-direction: column; gap: .6rem; }
+.lead-card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: .8rem; }
+.lead-card__top h3 { font-size: 1.02rem; margin: 0; }
+.lead-card__meta { font-size: .82rem; color: var(--text-faint); margin: .15rem 0 0; }
+.lead-card__score { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
+.score-num { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--ink); }
+.temp { font-size: .72rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+.temp--quente { background: #fef2f2; color: #b42318; }
+.temp--morno { background: #fffbeb; color: #a1610a; }
+.temp--frio { background: #eff6ff; color: #1e5eb4; }
+.lead-card__facts { list-style: none; padding: 0; margin: 0; font-size: .84rem; color: var(--text-soft); display: grid; gap: .25rem; }
+.lead-card__facts li::before { content: "· "; color: var(--text-faint); }
+.lead-card__angle { color: var(--emerald-deep); }
+.lead-card__contacts { font-size: .82rem; }
+.lead-card__contacts a { font-weight: 600; }
+.lead-card__actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .2rem; }
+.chip--on { background: #ecfdf5; color: var(--emerald-deep); border-color: #a7f3d0; }
+.lead-status { font-size: .78rem; color: var(--text-faint); display: inline-flex; align-items: center; gap: .3rem; }
+.lead-status select { font: inherit; font-size: .82rem; padding: .3rem .4rem; border: 1px solid var(--line); border-radius: 7px; background: #fff; }
+
+.leads-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.leads-filter { display: flex; flex-wrap: wrap; gap: .4rem; }
+.lead-filter-b { font: inherit; font-size: .8rem; font-weight: 600; border: 1px solid var(--line); background: #fff; color: var(--text-soft); border-radius: 999px; padding: .35rem .75rem; cursor: pointer; }
+.lead-filter-b.is-on { border-color: var(--ink); color: var(--ink); }
+.lead-filter-b b { color: var(--emerald-deep); }
+
+.lead-detail { padding-bottom: 4rem; }
+.cfg-list { display: grid; grid-template-columns: max-content 1fr; gap: .4rem 1rem; font-size: .9rem; margin: .6rem 0 0; }
+.cfg-list dt { color: var(--text-faint); font-weight: 600; }
+.cfg-list dd { margin: 0; }
+
+.projects-list { margin-top: 1.2rem; }
+
+@media (max-width: 900px) {
+  .mainnav { position: absolute; top: 62px; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--line); flex-direction: column; padding: .5rem; display: none; z-index: 40; box-shadow: var(--shadow-1); }
+  .mainnav.is-open { display: flex; }
+  .navtoggle { display: block; }
+  .topbar .btn--primary { display: none; }
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .dash-grid { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+}

@@ -12,6 +12,8 @@ import { postprocess, extractHtml, analyzeHtml } from '../api/_lib/postprocess.j
 import { assemblePage, parseJsonLoose } from '../api/_lib/assemble.js';
 import { mockGenerate, mockPlan, mockSections } from '../api/_lib/mock.js';
 import { getProvider, listProviders } from '../api/_lib/providers.js';
+import { scoreLead, normalizeLead, leadToBriefing, slugify, LEAD_STATUS } from '../api/_lib/prospect.js';
+import { mockProspect, aisaConfigured } from '../api/_lib/aisa.js';
 
 let pass = 0;
 const t = (name, fn) => {
@@ -198,6 +200,44 @@ t('providers: nvidia é o default e reporta config', () => {
 t('providers: chat sem chave lança MISSING_KEY', async () => {
   const p = getProvider('nvidia', { apiKey: '' });
   await assert.rejects(() => p.chat({ system: 's', user: 'u' }), (e) => e.code === 'MISSING_KEY');
+});
+
+// ---------- PROSPECÇÃO (Máquina de Leads integrada) ----------
+t('prospect: scoreLead — nota+avaliações+site+ig → score/temperatura', () => {
+  const alto = scoreLead({ nota: 4.9, avaliacoes: 200, siteAntigo: 'https://x.pt', igAtivo: true, igSeguidores: 5000 });
+  assert.ok(alto.score >= 70 && alto.temperatura === 'quente');
+  const baixo = scoreLead({ nota: 3.9, avaliacoes: 2 });
+  assert.ok(baixo.score < 45 && baixo.temperatura === 'frio');
+  assert.ok(alto.score <= 100 && baixo.score >= 0);
+});
+t('prospect: normalizeLead limpa contatos, deriva slug, score e diagnóstico', () => {
+  const l = normalizeLead({ title: 'Dra. Ana Nutri', category: 'Nutricionista', city: 'Porto', rating: { value: 4.7, votes_count: 60 }, phone: '+351 912 345 678', url: 'https://instagram.com/ana.nutri' }, 'nutricionista em Porto');
+  assert.equal(l.nome, 'Dra. Ana Nutri');
+  assert.equal(l.instagram, 'ana.nutri');
+  assert.equal(l.whatsapp, '+351912345678');
+  assert.ok(l.slug && l.slug.length > 3);
+  assert.ok(typeof l.score === 'number' && l.diagnostico.length > 0);
+  assert.ok(LEAD_STATUS.includes(l.status));
+});
+t('prospect: leadToBriefing gera briefing do PageForge com WhatsApp e sem inventar', () => {
+  const lead = normalizeLead({ title: 'Clínica Sorriso', category: 'Dentista', city: 'Lisboa', rating: { value: 4.8, votes_count: 130 }, phone: '+351911222333', url: null }, 'dentista em Lisboa');
+  const { brief, pageType, source } = leadToBriefing(lead);
+  assert.equal(pageType, 'sales');
+  assert.equal(brief.productName, 'Clínica Sorriso');
+  assert.ok(brief.checkoutUrl.startsWith('https://wa.me/351911222333'));
+  assert.ok(/não inventar/i.test(brief.notes));
+  assert.ok(brief.proof.some((p) => /Google/.test(p)));
+  assert.equal(source.kind, 'lead');
+});
+t('prospect: slugify remove acentos e caracteres', () => {
+  assert.equal(slugify('Café João & Cia — Ltda!'), 'cafe-joao-cia-ltda');
+});
+t('aisa: mockProspect devolve leads normalizados com score', () => {
+  const r = mockProspect({ niche: 'advogado', city: 'São Paulo', count: 4 });
+  assert.equal(r.leads.length, 4);
+  assert.ok(r.mock === true);
+  assert.ok(r.leads.every((l) => typeof l.score === 'number' && l.slug && l.temperatura));
+  assert.equal(typeof aisaConfigured(), 'boolean');
 });
 
 console.log(`\n${process.exitCode ? 'FALHOU' : 'OK'} — ${pass} testes passaram.`);

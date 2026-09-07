@@ -27,7 +27,16 @@
       <img class="brand__mark" src="/assets/img/mark.svg" alt="" width="30" height="30">
       <span class="brand__name"><b>PAGE</b><span>FORGE</span><span class="brand__ai">AI</span></span>
     </a>
+    <nav class="mainnav" id="mainnav" aria-label="Navegação principal">
+      <a href="#/" data-route="/">Dashboard</a>
+      <a href="#/new" data-route="/new">Criar Página</a>
+      <a href="#/prospeccao" data-route="/prospeccao">Prospecção</a>
+      <a href="#/leads" data-route="/leads">Leads</a>
+      <a href="#/projetos" data-route="/projetos">Projetos</a>
+      <a href="#/config" data-route="/config">Configurações</a>
+    </nav>
     <a class="btn btn--primary btn--sm" href="#/new" data-nav="new" data-new>CRIAR NOVA PÁGINA</a>
+    <button class="navtoggle" id="navToggle" aria-label="Menu" aria-expanded="false">☰</button>
   </div>
 </header>
 
@@ -37,40 +46,114 @@
 
 <main>
 
-  <!-- ===================== HOME ===================== -->
+  <!-- ===================== DASHBOARD ===================== -->
   <section class="view is-active" id="view-home">
-    <div class="container hero">
-      <p class="hero__kicker">Plataforma de IA para páginas de conversão</p>
-      <h1>Transforme uma ideia em uma página pronta para vender.</h1>
-      <p class="hero__sub">Crie sales pages, presells e páginas de conversão com inteligência artificial.</p>
+    <div class="container hero" style="padding-bottom:1.5rem">
+      <p class="hero__kicker">PageForge AI</p>
+      <h1>Do lead à página pronta para vender.</h1>
+      <p class="hero__sub">Dois modos: <strong>Prospecção</strong> encontra e qualifica clientes; <strong>Criador de Páginas</strong> transforma cada um numa landing profissional.</p>
       <div class="hero__cta">
-        <a class="btn btn--primary" href="#/new" data-new>CRIAR NOVA PÁGINA</a>
-        <a class="btn btn--ghost" href="#comofunciona">Como funciona</a>
+        <a class="btn btn--primary" href="#/prospeccao">PROSPECTAR</a>
+        <a class="btn btn--ghost" href="#/new" data-new>Criar página do zero</a>
       </div>
-      <p class="hero__note" id="homeStatus">Verificando o motor de IA…</p>
+      <p class="hero__note" id="homeStatus">Verificando os motores…</p>
     </div>
 
-    <div class="container" id="comofunciona">
-      <div class="steps">
-        <div class="steps__item"><div class="steps__n">01</div><h3>Briefing</h3><p>Você informa o produto, a oferta, o público e o link de destino. Só o essencial.</p></div>
-        <div class="steps__item"><div class="steps__n">02</div><h3>Tipo &amp; estilo</h3><p>Escolhe o formato (sales, presell, advertorial…) e a direção visual.</p></div>
-        <div class="steps__item"><div class="steps__n">03</div><h3>Geração com IA</h3><p>A IA analisa oferta, avatar e mecanismo, escreve a copy e monta a página.</p></div>
-        <div class="steps__item"><div class="steps__n">04</div><h3>Preview &amp; export</h3><p>Você revisa em desktop/tablet/mobile, ajusta, e exporta o pacote pronto.</p></div>
-      </div>
+    <div class="container">
+      <div class="kpis" id="kpis"></div>
 
-      <div class="pitch">
-        <h2>O cérebro da Forge Sales Page Skill, agora numa aplicação web.</h2>
-        <p class="muted" style="color:#b9c1bb">A PageForge AI é o <strong>builder</strong>. Cada página gerada recebe a própria direção de arte — não a identidade verde daqui.</p>
-        <ul>
-          <li>Análise de oferta, avatar, mecanismo e estágio de consciência</li>
-          <li>Arquitetura de vendas por caso (consciência × tráfego × ticket)</li>
-          <li>Copywriting de conversão no idioma do briefing</li>
-          <li>Direção de arte única por produto + anti-“cara de IA”</li>
-          <li>SEO técnico, Open Graph e JSON-LD válido (sem review/rating falso)</li>
-          <li>Compliance Google Ads e Meta Ads embutido</li>
-          <li>Camada de scroll: STATIC → MOTION → CINEMATIC → STORYTELLING</li>
-          <li>Exportação: <code>index.html</code> + robots + sitemap + manifest + zip</li>
-        </ul>
+      <div class="dash-grid">
+        <a class="dash-card" href="#/prospeccao">
+          <h3>Prospecção</h3>
+          <p>Busque empresas por nicho e cidade. Cada resultado vem com nota do Google, contatos, diagnóstico do site atual e um score de oportunidade.</p>
+          <span class="dash-card__go">Abrir prospecção →</span>
+        </a>
+        <a class="dash-card" href="#/leads">
+          <h3>Leads</h3>
+          <p>Sua lista de clientes prospectados, com status e diagnóstico. O botão <em>Criar nova versão</em> manda o lead direto para o builder como briefing.</p>
+          <span class="dash-card__go">Ver leads →</span>
+        </a>
+        <a class="dash-card" href="#/new" data-new>
+          <h3>Criador de Páginas</h3>
+          <p>Sales page, presell, advertorial, captura, SaaS ou obrigado. Briefing → IA (método Forge) → preview → export HTML/ZIP. SEO e compliance embutidos.</p>
+          <span class="dash-card__go">Criar página →</span>
+        </a>
+        <a class="dash-card" href="#/projetos">
+          <h3>Projetos / Páginas</h3>
+          <p>As páginas que você já gerou, prontas para reabrir, ajustar e exportar de novo.</p>
+          <span class="dash-card__go">Ver projetos →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PROSPECÇÃO ===================== -->
+  <section class="view" id="view-prospeccao">
+    <div class="container prospect">
+      <h1>Prospecção</h1>
+      <p class="panel__lead">Encontre empresas com site fraco (ou sem site) para oferecer uma landing nova. Motor: AIsa (Google Maps + Instagram + IA).</p>
+
+      <form class="panel prospect-form" id="prospectForm">
+        <div class="grid-3">
+          <div class="field"><label>Nicho<input type="text" name="niche" placeholder="nutricionista, advogado, clínica…" required></label></div>
+          <div class="field"><label>Cidade<input type="text" name="city" placeholder="Lisboa, São Paulo, Porto…" required></label></div>
+          <div class="field"><label>Quantos<input type="number" name="count" value="10" min="1" max="25"></label></div>
+        </div>
+        <details class="prospect-adv">
+          <summary>Filtros avançados</summary>
+          <div class="grid-3" style="margin-top:.8rem">
+            <div class="field"><label>Nota mínima<input type="number" name="minRating" value="0" min="0" max="5" step="0.1"></label></div>
+            <div class="field"><label>Avaliações mínimas<input type="number" name="minReviews" value="0" min="0" max="9999"></label></div>
+          </div>
+        </details>
+        <button type="submit" class="btn btn--primary" id="btnProspect">PROSPECTAR</button>
+        <span class="prospect-status" id="prospectStatus"></span>
+      </form>
+
+      <div class="prospect-results" id="prospectResults"></div>
+    </div>
+  </section>
+
+  <!-- ===================== LEADS ===================== -->
+  <section class="view" id="view-leads">
+    <div class="container">
+      <div class="leads-head">
+        <h1>Leads</h1>
+        <div class="leads-filter" id="leadsFilter"></div>
+      </div>
+      <p class="panel__lead" id="leadsCount"></p>
+      <div class="leads-list" id="leadsList"></div>
+    </div>
+  </section>
+
+  <!-- ===================== LEAD DETAIL ===================== -->
+  <section class="view" id="view-lead">
+    <div class="container lead-detail" id="leadDetail"></div>
+  </section>
+
+  <!-- ===================== PROJETOS ===================== -->
+  <section class="view" id="view-projetos">
+    <div class="container">
+      <h1>Projetos / Páginas</h1>
+      <p class="panel__lead">Páginas geradas neste navegador. Reabra para ajustar ou exportar de novo.</p>
+      <div class="projects-list" id="projectsList"></div>
+    </div>
+  </section>
+
+  <!-- ===================== CONFIGURAÇÕES ===================== -->
+  <section class="view" id="view-config">
+    <div class="container">
+      <h1>Configurações</h1>
+      <div class="panel">
+        <h2>Motores</h2>
+        <dl class="cfg-list" id="cfgEngines"></dl>
+        <p class="tiny muted">As chaves (<code>NVIDIA_API_KEY</code> para páginas, <code>AISA_KEY</code> para prospecção) ficam apenas no servidor, nas Environment Variables da Vercel. Nunca no navegador nem no repositório.</p>
+      </div>
+      <div class="panel">
+        <h2>Dados</h2>
+        <p class="tiny muted">Leads e projetos ficam neste navegador (localStorage). A arquitetura tem um adapter de armazenamento pronto para migrar para nuvem numa fase seguinte, sem reescrever a interface.</p>
+        <button class="btn btn--ghost btn--sm" id="btnExportData">Exportar dados (JSON)</button>
+        <button class="btn btn--ghost btn--sm" id="btnClearData">Limpar dados locais</button>
       </div>
     </div>
   </section>
@@ -257,6 +340,8 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="/assets/js/zipfile.js"></script>
+<script src="/assets/js/store.js"></script>
+<script src="/assets/js/prospect.js"></script>
 <script src="/assets/js/app.js"></script>
 </body>
 </html>

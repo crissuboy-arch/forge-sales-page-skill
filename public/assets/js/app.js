@@ -49,41 +49,68 @@
   }
 
   /* ------------------------------------------------- router */
-  var VIEWS = { '': 'view-home', '/': 'view-home', '/new': 'view-new', '/preview': 'view-preview', '/generating': 'view-generating' };
+  var VIEWS = {
+    '': 'view-home', '/': 'view-home', '/new': 'view-new', '/preview': 'view-preview', '/generating': 'view-generating',
+    '/prospeccao': 'view-prospeccao', '/leads': 'view-leads', '/lead': 'view-lead', '/projetos': 'view-projetos', '/config': 'view-config'
+  };
   function route() {
     var hash = location.hash.replace(/^#/, '') || '/';
     if (hash === '/preview' && !state.generated) hash = '/new';
-    var id = VIEWS[hash] || 'view-home';
+    var parts = hash.split('/').filter(Boolean); // ['lead','slug']
+    var base = '/' + (parts[0] || '');
+    var param = parts[1] || '';
+    var id = VIEWS[base] || VIEWS[hash] || 'view-home';
     $$('.view').forEach(function (v) { v.classList.toggle('is-active', v.id === id); });
+    $$('#mainnav a').forEach(function (a) {
+      a.classList.toggle('is-on', a.dataset.route === base || (base === '/lead' && a.dataset.route === '/leads'));
+    });
+    $('#mainnav').classList.remove('is-open');
+    var nt = $('#navToggle'); if (nt) nt.setAttribute('aria-expanded', 'false');
     window.scrollTo(0, 0);
     if (id === 'view-new') renderWizard();
     if (id === 'view-preview') renderPreview();
+    if (window.PFProspect) PFProspect.onRoute(base, param, health);
   }
   window.addEventListener('hashchange', route);
+
+  var navT = $('#navToggle');
+  if (navT) navT.addEventListener('click', function () {
+    var n = $('#mainnav'); var open = n.classList.toggle('is-open');
+    navT.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
 
   $$('[data-new]').forEach(function (b) {
     b.addEventListener('click', function (e) { e.preventDefault(); ui.step = state.generated ? 3 : 0; location.hash = '#/new'; });
   });
 
-  /* ------------------------------------------------- health */
+  /* ------------------------------------------------- health (páginas + prospecção) */
   function checkHealth() {
-    fetch('/api/health').then(function (r) { return r.json(); }).then(function (h) {
-      health = h;
+    health = { pages: {}, prospect: {} };
+    var jget = function (u) { return fetch(u).then(function (r) { return r.json(); }).catch(function () { return {}; }); };
+    Promise.all([jget('/api/health'), jget('/api/prospect')]).then(function (r) {
+      health.pages = r[0] || {};
+      health.prospect = r[1] || {};
+      var hp = health.pages, pr = health.prospect;
+      var fm = $('#footModel'); if (fm && hp.model) fm.textContent = 'NVIDIA · ' + hp.model;
       var hs = $('#homeStatus');
-      var fm = $('#footModel');
-      if (fm && h.model) fm.textContent = 'NVIDIA · ' + h.model;
-      if (h.ready) {
-        if (hs) hs.textContent = h.mock ? 'Modo de desenvolvimento (MOCK) ativo.' : 'Motor de IA pronto (NVIDIA · ' + h.model + ').';
-      } else {
-        if (hs) hs.innerHTML = 'A geração com IA está bloqueada: falta configurar <code>NVIDIA_API_KEY</code>.';
-        var b = $('#healthBanner');
-        $('#healthBannerText').innerHTML = 'Configuração pendente: defina a variável <code>NVIDIA_API_KEY</code> nas Environment Variables da Vercel e refaça o deploy. O resto do builder funciona normalmente.';
-        b.hidden = false;
+      if (hs) {
+        var partes = [];
+        partes.push(hp.ready ? ('Páginas: ' + (hp.mock ? 'modo exemplo' : (hp.provider || 'NVIDIA') + ' pronto')) : 'Páginas: NVIDIA_API_KEY pendente');
+        partes.push(pr.ready ? ('Prospecção: ' + (pr.keyConfigured ? 'AIsa pronta' : 'modo exemplo')) : 'Prospecção: AISA_KEY pendente');
+        hs.textContent = partes.join('  ·  ');
       }
-    }).catch(function () {
-      var hs = $('#homeStatus'); if (hs) hs.textContent = 'Não foi possível falar com o servidor de IA.';
+      if (!hp.ready || !pr.ready) {
+        var msgs = [];
+        if (!hp.ready) msgs.push('<code>NVIDIA_API_KEY</code> (geração de páginas)');
+        if (!pr.ready) msgs.push('<code>AISA_KEY</code> (prospecção)');
+        $('#healthBannerText').innerHTML = 'Configuração pendente na Vercel: ' + msgs.join(' e ') + '. O resto funciona em modo de exemplo.';
+        $('#healthBanner').hidden = false;
+      }
+      if (window.PFProspect) { PFProspect.renderKpis(); PFProspect.onRoute(currentBase(), currentParam(), health); }
     });
   }
+  function currentBase() { return '/' + ((location.hash.replace(/^#/, '') || '/').split('/').filter(Boolean)[0] || ''); }
+  function currentParam() { return (location.hash.replace(/^#/, '') || '/').split('/').filter(Boolean)[1] || ''; }
 
   /* ------------------------------------------------- wizard */
   var form = $('#briefForm');
@@ -196,7 +223,7 @@
     var b = state.brief;
     var el = $('#genPreflight');
     var notes = [];
-    if (!health || !health.ready) notes.push(['err', 'NVIDIA_API_KEY não configurada — a geração vai falhar até a chave existir na Vercel.']);
+    if (!health || !health.pages || !health.pages.ready) notes.push(['err', 'NVIDIA_API_KEY não configurada — a geração vai falhar até a chave existir na Vercel.']);
     if (!b.checkoutUrl && !b.affiliateUrl) notes.push(['warn', 'Sem URL de checkout/afiliado: os CTAs vão para “#oferta” (pendência).']);
     if (b.affiliateUrl && b.affiliateUrl.indexOf('#') > -1) notes.push(['ok', 'Fragmento de afiliado (#…) será preservado nos CTAs.']);
     var sens = /sa[úu]de|emagre|suplement|ansiedade|renda|invest|cripto|aposta|relacion/i.test((b.niche || '') + (b.description || '') + (b.offer || ''));
@@ -342,6 +369,7 @@
       if (!f || !f.html) { fail(new Error((f && f.errors && f.errors.join(' ')) || 'A IA não devolveu uma página.')); return; }
       state.generated = { html: f.html, meta: f.meta || {}, warnings: f.warnings || [], errors: f.errors || [] };
       state.generatedAt = Date.now();
+      saveProject();
       save();
       location.hash = '#/preview';
       toast(msg);
@@ -415,7 +443,7 @@
   $('#btnApplyAi').addEventListener('click', function () {
     var instr = $('#editInstruction').value.trim();
     if (!instr) { toast('Escreva a instrução ou escolha um atalho.'); return; }
-    if (!health || !health.ready) { toast('Precisa da NVIDIA_API_KEY para ajustar com IA.'); return; }
+    if (!health || !health.pages || !health.pages.ready) { toast('Precisa da NVIDIA_API_KEY para ajustar com IA.'); return; }
     generate({ section: true, instruction: instr });
   });
   $('#btnRegen').addEventListener('click', function () {
@@ -521,8 +549,63 @@
     });
   }
 
+  /* ------------------------------------------------- integração PROSPECÇÃO ↔ builder */
+  function toBuilder(brief, pageType, scrollMode, source) {
+    var base = blank().brief;
+    state.brief = Object.assign({}, base, brief || {});
+    if (pageType) state.brief.pageType = pageType;
+    if (scrollMode) state.brief.scrollMode = scrollMode;
+    state.leadSource = source || null;
+    state.generated = null;
+    ui.step = 0;
+    save();
+    location.hash = '#/new';
+    if (currentBase() === '/new') renderWizard();
+    toast('Briefing preenchido' + (source && source.nome ? ' com ' + source.nome : '') + '. Revise e gere.');
+  }
+
+  function saveProject() {
+    if (!state.generated) return;
+    var b = state.brief || {};
+    var id = (state.leadSource && state.leadSource.slug ? state.leadSource.slug + '-' : '') + Date.now().toString(36);
+    var proj = {
+      id: id,
+      name: b.projectName || b.productName || 'Página',
+      pageType: (state.generated.meta && state.generated.meta.pageType) || b.pageType || 'sales',
+      html: state.generated.html,
+      meta: state.generated.meta || {},
+      leadSlug: state.leadSource && state.leadSource.slug || null,
+      leadNome: state.leadSource && state.leadSource.nome || null
+    };
+    try { window.PFStore && PFStore.projects.upsert(proj); } catch (e) {}
+    if (proj.leadSlug) { try { PFStore.leads.upsert({ slug: proj.leadSlug, status: 'redesenhado' }); } catch (e) {} }
+    state.currentProjectId = id;
+    if (window.PFProspect) PFProspect.renderKpis();
+  }
+
+  function openProject(id) {
+    var p = window.PFStore && PFStore.projects.get(id);
+    if (!p) { toast('Projeto não encontrado.'); return; }
+    state.generated = { html: p.html, meta: p.meta || {}, warnings: [], errors: [] };
+    state.currentProjectId = id;
+    save();
+    location.hash = '#/preview';
+    renderPreview();
+  }
+
+  if (window.PFProspect) {
+    PFProspect.init({
+      toast: toast,
+      toBuilder: toBuilder,
+      openProject: openProject,
+      refreshKpis: function () { if (window.PFProspect) PFProspect.renderKpis(); },
+      go: function (h) { location.hash = h; }
+    });
+  }
+
   /* ------------------------------------------------- boot */
   checkHealth();
   if (!location.hash) location.hash = '#/';
   route();
+  if (window.PFProspect) PFProspect.renderKpis();
 })();
