@@ -122,9 +122,8 @@ class NvidiaProvider extends AIProvider {
       const err = new ProviderError(`NVIDIA respondeu ${res.status} para "${model}": ${detail}`, 502);
       err.status = res.status;
       err.detail = detail;
-      // 401/403/429 são fatais (não adianta trocar de modelo); 404/410/400-"model" são "tente o próximo".
       if (res.status === 401 || res.status === 403) { err.message = 'A NVIDIA_API_KEY foi rejeitada (401/403). Verifique a chave configurada.'; err.status = 401; err.fatal = true; }
-      else if (res.status === 429) { err.message = 'Limite de requisições da NVIDIA atingido (429). Aguarde alguns segundos e tente de novo.'; err.status = 429; err.fatal = true; }
+      else if (res.status === 429) { err.message = 'Limite de requisições da NVIDIA atingido (429).'; err.status = 429; }
       throw err;
     }
 
@@ -187,21 +186,22 @@ class NvidiaProvider extends AIProvider {
     for (const model of models) {
       // Não começa uma nova tentativa se já não há tempo hábil (< 12s).
       if (deadline && Date.now() > deadline - 12000 && lastErr) break;
-      for (let attempt = 0; attempt < 2; attempt++) {
+      for (let attempt = 0; attempt < 3; attempt++) {
         try {
           return await this._callModel(model, { system, user, temperature, maxTokens, signal, stream, onToken });
         } catch (err) {
           lastErr = err;
           if (err.fatal) throw err;
+          const rateLimited = err.status === 429;
           const overloaded = err.status === 500 || err.status === 502 || err.status === 503
             || /overload|temporarily|try again|stream vazio|resposta vazia/i.test(err.message || '');
           const wrongModel = err.status === 404 || err.status === 410
             || (err.status === 400 && /model|not (found|available)|end of life|deprecat/i.test(err.detail || err.message || ''));
           if (wrongModel) break; // próximo modelo
-          if (overloaded) {
-            if (attempt === 0 && (!deadline || Date.now() < deadline - 14000)) { await sleep(1200); continue; } // 1 retry no mesmo modelo
-            break; // próximo modelo
-          }
+          const timeLeft = !deadline || Date.now() < deadline - 16000;
+          if (rateLimited && attempt < 2 && timeLeft) { await sleep(6000 + attempt * 2000); continue; }
+          if (overloaded && attempt < 2 && timeLeft) { await sleep(1500); continue; }
+          if (rateLimited || overloaded) break; // esgotou retries → próximo modelo
           throw err; // erro não recuperável
         }
       }

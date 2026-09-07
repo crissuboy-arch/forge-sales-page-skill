@@ -265,13 +265,16 @@
     });
   }
 
-  // 1 retry seguro em erro de rede / 5xx / provider retriável (não em config).
-  function callStepRetry(body, onProgress) {
+  // até 2 retries em erro de rede / 5xx / rate-limit / provider retriável (não em config).
+  function callStepRetry(body, onProgress, tries) {
+    tries = tries || 0;
     return callStep(body, onProgress).catch(function (err) {
       if (err.isConfig) throw err;
-      var transient = err.retriable || /rede|encerrada|PROVIDER_ERROR|BAD_PLAN|BAD_RENDER|502|503|504|429/i.test((err.code || '') + ' ' + err.message);
-      if (!transient) throw err;
-      return new Promise(function (r) { setTimeout(r, 1500); }).then(function () { return callStep(body, onProgress); });
+      var msg = (err.code || '') + ' ' + (err.message || '');
+      var transient = err.retriable || /rede|encerrada|PROVIDER_ERROR|BAD_PLAN|BAD_RENDER|502|503|504|429|sobrecarregad|fila|limite/i.test(msg);
+      if (!transient || tries >= 2) throw err;
+      var wait = /429|limite|rate/i.test(msg) ? 7000 : 2500;
+      return new Promise(function (r) { setTimeout(r, wait); }).then(function () { return callStepRetry(body, onProgress, tries + 1); });
     });
   }
 
@@ -307,14 +310,17 @@
         plan = f.plan;
         var ids = (plan.sections || []).map(function (s) { return s.id; });
         if (!ids.length) throw new Error('plano sem seções');
-        var batches = chunk(ids, 3);
+        var SZ = 4;
+        var batches = chunk(ids, SZ);
         setStage(2, '');
         var run = Promise.resolve();
         batches.forEach(function (batch, bi) {
           run = run.then(function () {
-            setStage(3, '(seções ' + (bi * 3 + 1) + '–' + (bi * 3 + batch.length) + ' de ' + ids.length + ')');
+            if (bi > 0) return new Promise(function (r) { setTimeout(r, 1800); }); // espaça as chamadas (rate limit NVIDIA)
+          }).then(function () {
+            setStage(3, '(seções ' + (bi * SZ + 1) + '–' + (bi * SZ + batch.length) + ' de ' + ids.length + ')');
             return callStepRetry({ step: 'render', brief: state.brief, plan: plan, sectionIds: batch }, function (f) {
-              setStage(3, '(seções ' + (bi * 3 + 1) + '–' + (bi * 3 + batch.length) + ' de ' + ids.length + ', ' + kb(f) + ')');
+              setStage(3, '(seções ' + (bi * SZ + 1) + '–' + (bi * SZ + batch.length) + ' de ' + ids.length + ', ' + kb(f) + ')');
             }).then(function (f) { Object.keys(f.sections || {}).forEach(function (k) { sections[k] = f.sections[k]; }); });
           });
         });

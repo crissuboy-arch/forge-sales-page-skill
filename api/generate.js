@@ -110,14 +110,14 @@ export default async function handler(req, res) {
       if (!plan || !Array.isArray(plan.sections) || !plan.sections.length) {
         return finish({ t: 'error', code: 'BAD_PLAN', error: 'A IA não devolveu um plano válido. Tente de novo.', raw: String(r.content || '').slice(0, 1200) });
       }
-      plan.sections = plan.sections.filter((s) => s && s.id).slice(0, 12);
+      plan.sections = plan.sections.filter((s) => s && s.id).slice(0, 8);
       return finish({ t: 'done', ok: true, plan, meta: { provider: provider.name, model: r.model, ms: Date.now() - started, step: 'plan' } });
     }
 
     // ---------------- RENDER (lote de seções) ----------------
     if (step === 'render') {
       const plan = payload.plan || {};
-      const ids = Array.isArray(payload.sectionIds) ? payload.sectionIds.filter(Boolean).slice(0, 4) : [];
+      const ids = Array.isArray(payload.sectionIds) ? payload.sectionIds.filter(Boolean).slice(0, 5) : [];
       if (!plan.sections || !ids.length) return finish({ t: 'error', code: 'BAD_REQUEST', error: 'render precisa de plan e sectionIds.' });
       if (mock) return finish({ t: 'done', ok: true, sections: mockSections(brief, plan, ids), meta: { model: 'mock', ms: Date.now() - started } });
       const { system, user } = buildRenderMessages(brief, plan, ids);
