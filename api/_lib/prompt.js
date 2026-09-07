@@ -187,19 +187,31 @@ const SYSTEM_SHORT = `${SYSTEM_IDENTITY}
 
 Você está gerando UMA ETAPA de uma página (não a página inteira). Siga o contrato de saída da etapa à risca. Guardrails de compliance continuam valendo: sem depoimento/número/autoridade inventada, sem promessa absoluta, disclaimers em nicho sensível, urgência só se real, identidade visual própria (sem gradient text / glow / glass decorativo / AI-purple / grid de cards como estrutura).`;
 
-/** Etapa 1 — plano (análise + arquitetura + direção + copy + css + head). */
+// Playbook enxuto para a etapa PLAN (o corpus completo da skill estoura o tempo
+// da função). Destila o essencial de sales-architecture / copywriting /
+// offer-analysis / compliance / anti-ai.
+const PLAN_PLAYBOOK = `MÉTODO (resumo operacional):
+
+ARQUITETURA por estágio de consciência × tráfego:
+- problem-aware + Google/nativo → advertorial/artigo-problema → oferta
+- solution-aware → presell (mecanismo/comparação) → vendas
+- product-aware / lista → vendas direta
+- afiliado → SEMPRE presell, conteúdo próprio, disclosure visível, CTA preserva parâmetros (#aff=)
+Seções de uma página de conversão (adaptar à ordem certa para o caso, 5–9):
+hero(promessa+subhead+prova rápida+CTA) · problem(dor na voz do avatar) · mechanism(nomeie o "como" diferente, por que o método comum falha) · product(o que é, o que vem dentro) · benefits(recurso→o que faz→o que muda) · proof(SÓ provas reais do briefing; sem provas = demonstração/lógica/autoridade ou omitir) · offer(o que recebe, ancoragem, preço, próximo passo) · guarantee · faq(5–7 objeções reais) · disclosure(afiliado/publicidade) · footer(legal + publisher)
+
+COPY: uma ideia central; 2ª pessoa do singular; especificidade > adjetivo; subtítulos que contam a história; prova antes de pedir; voz do cliente (palavras do avatar). Idioma nativo do briefing.
+Sofisticação de mercado: 1–2 afirmar benefício; 3 liderar pelo mecanismo; 4 mecanismo+prova superior; 5 identidade ("isto é para quem…").
+
+COMPLIANCE (blocker): nunca inventar depoimento/número/estudo/autoridade/selo. Nunca promessa absoluta ou garantia de resultado ("garantido","cura","100%","renda garantida","sem esforço"). Nicho sensível (saúde/finanças/emagrecimento/relacionamento): disclaimers ("resultados podem variar","não substitui acompanhamento profissional / não é aconselhamento") + dor na 3ª pessoa/como fenômeno, nunca "você está [atributo]?". Urgência só se real. JSON-LD sem Review/AggregateRating.
+
+DIREÇÃO DE ARTE: identidade própria do produto (mood + paleta AA + par tipográfico). Evitar: gradient text, glow/neon, glass decorativo, "AI-purple", creme+latão genérico, #000/#fff puros, eyebrow em toda seção, "scroll ↓", em-dash em texto visível, grid de cards como estrutura.`;
+
+/** Etapa 1 — plano (análise + arquitetura + direção + copy + tokens + head). */
 export function buildPlanMessages(brief) {
-  const corpus = buildKnowledgeCorpus({
-    pageType: brief.pageType,
-    scrollMode: brief.scrollMode,
-    affiliate: brief.affiliate,
-    sensitive: brief.sensitive,
-  });
   const system = `${SYSTEM_IDENTITY}
 
-=================== MÉTODO FORGE + REFERÊNCIAS (sistema especialista) ===================
-${corpus}
-======================================================================================
+${PLAN_PLAYBOOK}
 ${PLAN_CONTRACT}`;
 
   const user = `Monte o PLANO da página.
