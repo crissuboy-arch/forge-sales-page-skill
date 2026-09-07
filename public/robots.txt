@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://pageforge-ai.vercel.app/sitemap.xml
+Sitemap: https://pageforge-ai-woad.vercel.app/sitemap.xml

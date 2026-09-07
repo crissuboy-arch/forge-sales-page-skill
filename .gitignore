@@ -42,3 +42,9 @@ desktop.ini
 dist/
 *.zip
 !templates/**/*.zip
+
+# Vercel
+.vercel
+.env*.local
+VERCEL_OIDC_TOKEN
+!.env.example
