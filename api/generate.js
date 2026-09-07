@@ -117,11 +117,11 @@ export default async function handler(req, res) {
     // ---------------- RENDER (lote de seções) ----------------
     if (step === 'render') {
       const plan = payload.plan || {};
-      const ids = Array.isArray(payload.sectionIds) ? payload.sectionIds.filter(Boolean).slice(0, 5) : [];
+      const ids = Array.isArray(payload.sectionIds) ? payload.sectionIds.filter(Boolean).slice(0, 8) : [];
       if (!plan.sections || !ids.length) return finish({ t: 'error', code: 'BAD_REQUEST', error: 'render precisa de plan e sectionIds.' });
       if (mock) return finish({ t: 'done', ok: true, sections: mockSections(brief, plan, ids), meta: { model: 'mock', ms: Date.now() - started } });
       const { system, user } = buildRenderMessages(brief, plan, ids);
-      const r = await callAI({ system, user, temperature: 0.5, maxTokens: 2800, budgetMs: 50000 });
+      const r = await callAI({ system, user, temperature: 0.5, maxTokens: 5200, budgetMs: 52000 });
       let out = parseJsonLoose(r.content);
       if (!out || typeof out !== 'object') {
         return finish({ t: 'error', code: 'BAD_RENDER', error: 'A IA não devolveu HTML de seção válido. Tente de novo.', raw: String(r.content || '').slice(0, 1000) });

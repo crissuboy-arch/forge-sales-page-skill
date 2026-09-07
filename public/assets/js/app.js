@@ -310,7 +310,7 @@
         plan = f.plan;
         var ids = (plan.sections || []).map(function (s) { return s.id; });
         if (!ids.length) throw new Error('plano sem seções');
-        var SZ = 4;
+        var SZ = 8; // uma chamada só quando cabe (menos exposição ao rate-limit da NVIDIA)
         var batches = chunk(ids, SZ);
         setStage(2, '');
         var run = Promise.resolve();
