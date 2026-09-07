@@ -158,7 +158,7 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     if (err instanceof MissingKeyError) return finish({ t: 'error', code: 'NVIDIA_KEY_MISSING', error: 'NVIDIA_API_KEY ausente no servidor.' });
-    if (err instanceof ProviderError) return finish({ t: 'error', code: 'PROVIDER_ERROR', error: err.message, retriable: !err.fatal });
+    if (err instanceof ProviderError) return finish({ t: 'error', code: 'PROVIDER_ERROR', error: err.message, retriable: !err.fatal, raw: err.raw || err.detail || null });
     return finish({ t: 'error', code: 'UNEXPECTED', error: `Erro inesperado: ${err.message}` });
   }
 }

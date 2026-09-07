@@ -159,7 +159,11 @@ class NvidiaProvider extends AIProvider {
         }
       }
       const clean = stripReasoning(content);
-      if (!clean.trim()) throw new ProviderError(`A NVIDIA retornou stream vazio (ou só raciocínio) para "${model}".`, 502);
+      if (!clean.trim()) {
+        const e = new ProviderError(`A NVIDIA retornou stream vazio (ou só raciocínio) para "${model}".`, 502);
+        e.raw = `finish=${finishReason} rawlen=${content.length} :: ${content.slice(0, 400)}`;
+        throw e;
+      }
       return { content: clean, model: realModel, finishReason, usage };
     }
 
