@@ -58,7 +58,7 @@ t('knowledge: corpus inclui método e referências do formato', () => {
   assert.ok(c.includes('MÉTODO FORGE'));
   assert.ok(/presell/i.test(c));
   assert.ok(/affiliate-pages/i.test(c));
-  assert.ok(c.length > 5000 && c.length <= 48200);
+  assert.ok(c.length > 4000 && c.length <= 20200);
 });
 t('knowledge: cinematic puxa camada de motion', () => {
   const c = buildKnowledgeCorpus({ pageType: 'sales', scrollMode: 'cinematic' });

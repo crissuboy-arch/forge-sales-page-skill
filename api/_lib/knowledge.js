@@ -60,21 +60,22 @@ export function buildKnowledgeCorpus(opts = {}) {
   if (cinematic) for (const n of SCROLL_DOCS_MOTION) scrollNames.add(n);
 
   const parts = [];
-  parts.push(`# MÉTODO FORGE (resumo operacional)\n${clamp(KNOWLEDGE.skill, 9000)}`);
+  parts.push(`# MÉTODO FORGE (resumo operacional)\n${clamp(KNOWLEDGE.skill, 4200)}`);
 
   for (const name of refNames) {
-    if (R[name]) parts.push(`# references/${name}.md\n${clamp(R[name], 7000)}`);
+    if (R[name]) parts.push(`# references/${name}.md\n${clamp(R[name], 2600)}`);
   }
   for (const name of scrollNames) {
-    if (S[name]) parts.push(`# scroll-experience/${name}.md\n${clamp(S[name], 5000)}`);
+    if (S[name]) parts.push(`# scroll-experience/${name}.md\n${clamp(S[name], 1800)}`);
   }
   if (sensitive) {
     parts.push('# ATENÇÃO: nicho sensível — compliance é blocker, não sugestão. Aplicar TODOS os disclaimers e reescritas de compliance-google.md / compliance-meta.md.');
   }
 
-  // Teto de segurança do corpus inteiro (~48k chars ≈ 14k tokens).
+  // Teto do corpus (~20k chars ≈ 6k tokens) — mantém a geração dentro do
+  // limite de tempo da função serverless.
   let corpus = parts.join('\n\n---\n\n');
-  if (corpus.length > 48000) corpus = `${corpus.slice(0, 48000)}\n[...corpus truncado no limite de contexto...]`;
+  if (corpus.length > 20000) corpus = `${corpus.slice(0, 20000)}\n[...corpus truncado no limite de contexto...]`;
   return corpus;
 }
 

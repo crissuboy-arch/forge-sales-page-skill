@@ -126,12 +126,14 @@ class NvidiaProvider extends AIProvider {
     };
   }
 
-  async chat({ system, user, temperature = 0.6, maxTokens = 8000, signal } = {}) {
+  async chat({ system, user, temperature = 0.6, maxTokens = 8000, signal, deadline = 0 } = {}) {
     if (!this.isConfigured()) throw new MissingKeyError('nvidia');
 
     const models = this.candidateModels();
     let lastErr = null;
     for (const model of models) {
+      // Não começa uma nova tentativa se já não há tempo hábil (< 12s).
+      if (deadline && Date.now() > deadline - 12000 && lastErr) break;
       try {
         return await this._callModel(model, { system, user, temperature, maxTokens, signal });
       } catch (err) {

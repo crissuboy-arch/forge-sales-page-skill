@@ -64,15 +64,16 @@ export default async function handler(req, res) {
 
   // ---- IA real ----
   const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), 56000);
+  const timer = setTimeout(() => ac.abort(), 50000);
   let result;
   try {
     result = await provider.chat({
       system,
       user,
-      temperature: sectionMode ? 0.35 : 0.7,
-      maxTokens: 8000,
+      temperature: sectionMode ? 0.3 : 0.6,
+      maxTokens: sectionMode ? 8000 : 5000,
       signal: ac.signal,
+      deadline: started + 48000,
     });
   } catch (err) {
     clearTimeout(timer);
