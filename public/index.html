@@ -131,6 +131,24 @@
     <div class="container lead-detail" id="leadDetail"></div>
   </section>
 
+  <!-- ===================== ANTES × DEPOIS ===================== -->
+  <section class="view" id="view-compare">
+    <div class="container compare">
+      <div class="compare-head">
+        <div><a href="#/preview" id="compareBack">← Preview</a><h1 id="compareTitle">Antes × Depois</h1></div>
+        <div class="compare-tabs" id="compareTabs">
+          <button data-mode="antes">Site atual</button>
+          <button data-mode="depois" class="on">Nova versão</button>
+          <button data-mode="lado">Lado a lado</button>
+        </div>
+      </div>
+      <div class="compare-cols" id="compareCols">
+        <div class="compare-col" data-side="antes"><div class="compare-lb"><span class="dot o"></span>SITE ATUAL <a id="compareOldLink" href="#" target="_blank" rel="noopener">abrir ↗</a></div><div id="compareOldWrap"></div></div>
+        <div class="compare-col" data-side="depois"><div class="compare-lb"><span class="dot n"></span>NOVA VERSÃO</div><iframe id="compareNew" title="Nova versão"></iframe></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===================== PROJETOS ===================== -->
   <section class="view" id="view-projetos">
     <div class="container">
@@ -289,13 +307,17 @@
           <button type="button" data-device="mobile">Mobile</button>
         </div>
         <div class="pv-actions">
-          <button type="button" class="btn btn--ghost btn--sm" id="btnEdit">Editar</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnVisualEditor">Editor visual</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnCompare" hidden>Antes × Depois</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnQA">QA</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnEdit">Ajuste IA</button>
           <button type="button" class="btn btn--ghost btn--sm" id="btnRegen">Regerar</button>
           <button type="button" class="btn btn--ghost btn--sm" id="btnCopy">Copiar código</button>
           <button type="button" class="btn btn--ghost btn--sm" id="btnOpen">Abrir em aba</button>
           <button type="button" class="btn btn--primary btn--sm" id="btnExport">Exportar</button>
         </div>
       </div>
+      <div class="qa-report" id="qaReport" hidden></div>
 
       <div class="pv-stage">
         <div class="pv-frame-wrap" id="frameWrap" data-device="desktop">
@@ -341,6 +363,7 @@
 
 <script src="/assets/js/zipfile.js"></script>
 <script src="/assets/js/store.js"></script>
+<script src="/assets/js/editor.js"></script>
 <script src="/assets/js/prospect.js"></script>
 <script src="/assets/js/app.js"></script>
 </body>

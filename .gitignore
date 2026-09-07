@@ -48,3 +48,10 @@ dist/
 .env*.local
 VERCEL_OIDC_TOKEN
 !.env.example
+
+# Impeccable skill (instalado via `npx skills add` — ferramenta de agente, não código do produto)
+.agents/
+.agent/
+
+# Skills de agente vendorizadas (npx skills add) — ferramentas, não código do produto
+.claude/skills/

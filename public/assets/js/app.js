@@ -51,6 +51,7 @@
   /* ------------------------------------------------- router */
   var VIEWS = {
     '': 'view-home', '/': 'view-home', '/new': 'view-new', '/preview': 'view-preview', '/generating': 'view-generating',
+    '/compare': 'view-compare',
     '/prospeccao': 'view-prospeccao', '/leads': 'view-leads', '/lead': 'view-lead', '/projetos': 'view-projetos', '/config': 'view-config'
   };
   function route() {
@@ -69,6 +70,7 @@
     window.scrollTo(0, 0);
     if (id === 'view-new') renderWizard();
     if (id === 'view-preview') renderPreview();
+    if (id === 'view-compare') renderCompare();
     if (window.PFProspect) PFProspect.onRoute(base, param, health);
   }
   window.addEventListener('hashchange', route);
@@ -367,12 +369,12 @@
 
     function finishOk(f, msg) {
       if (!f || !f.html) { fail(new Error((f && f.errors && f.errors.join(' ')) || 'A IA não devolveu uma página.')); return; }
-      state.generated = { html: f.html, meta: f.meta || {}, warnings: f.warnings || [], errors: f.errors || [] };
+      state.generated = { html: f.html, meta: f.meta || {}, warnings: f.warnings || [], errors: f.errors || [], qa: f.qa || (state.generated && state.generated.qa) || null };
       state.generatedAt = Date.now();
       saveProject();
       save();
       location.hash = '#/preview';
-      toast(msg);
+      toast(msg + (f.qa ? '  ·  QA ' + f.qa.score + '/20' : ''));
     }
     function fail(err) {
       if (err && err.isConfig) showFatal('Falta a NVIDIA_API_KEY', err.message, true);
@@ -418,6 +420,22 @@
     if (!items.length) items.push(['ok', 'Nenhum aviso. Revise no preview antes de exportar.']);
     if (g.meta && typeof g.meta.ms === 'number') items.push(['info', 'Gerado em ' + (g.meta.ms / 1000).toFixed(1) + 's · formato ' + labelType(g.meta.pageType) + ' · scroll ' + (g.meta.scrollMode || '—')]);
     n.innerHTML = items.map(function (it) { return '<div class="notice notice--' + it[0] + '">' + escapeHtml(it[1]) + '</div>'; }).join('');
+
+    // botão Antes × Depois só quando a página veio de um lead com site atual
+    var lead = state.leadSource && state.leadSource.slug && (window.PFStore && PFStore.leads.get(state.leadSource.slug));
+    $('#btnCompare').hidden = !state.leadSource;
+    renderQaReport(g.qa);
+  }
+
+  function renderQaReport(qa) {
+    var el = $('#qaReport');
+    if (!qa) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    var dims = qa.dims || {};
+    var chips = Object.keys(dims).map(function (k) { return '<span class="qa-dim">' + k + ' ' + dims[k] + '/4</span>'; }).join('');
+    el.innerHTML = '<div class="qa-report__head"><strong>Impeccable QA: ' + qa.score + '/20 · ' + escapeHtml(qa.band || '') + '</strong>' + chips + '</div>' +
+      (qa.fixes && qa.fixes.length ? '<p class="qa-fixes">Correções aplicadas: ' + qa.fixes.map(escapeHtml).join(' · ') + '</p>' : '') +
+      (qa.findings && qa.findings.length ? '<ul class="qa-findings">' + qa.findings.slice(0, 8).map(function (f) { return '<li>[' + f.severity + '] ' + escapeHtml(f.category) + ': ' + escapeHtml(f.msg) + '</li>'; }).join('') + '</ul>' : '');
   }
 
   $$('.pv-devices button').forEach(function (b) {
@@ -427,6 +445,68 @@
     var e = $('#editbar'); e.hidden = !e.hidden;
     if (!e.hidden) $('#editInstruction').focus();
   });
+
+  /* ---- Editor visual ---- */
+  $('#btnVisualEditor').addEventListener('click', function () {
+    if (!state.generated) { toast('Gere uma página primeiro.'); return; }
+    var frame = $('#pvFrame');
+    if (!window.PFEditor) { toast('Editor indisponível.'); return; }
+    if (PFEditor.isOpen()) { toast('Editor já aberto.'); return; }
+    var ok = PFEditor.open(frame, function (html) {
+      state.generated.html = html;
+      state.generated.warnings = ['Editado no editor visual — a validação automática não foi refeita.'];
+      saveProject(); save();
+      renderPreview();
+      toast('Alterações salvas.');
+    });
+    if (!ok) toast('Não consegui abrir o editor neste preview.');
+    else toast('Modo edição. Clique nos elementos para editar.');
+  });
+  document.addEventListener('pf-editor-exit', function () { renderPreview(); });
+
+  /* ---- QA (Impeccable) sob demanda ---- */
+  $('#btnQA').addEventListener('click', function () {
+    if (!state.generated) { toast('Gere uma página primeiro.'); return; }
+    var r = $('#qaReport');
+    if (!r.hidden && state.generated.qa) { r.hidden = true; return; }
+    toast('Rodando QA…');
+    fetch('/api/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ step: 'qa', brief: state.brief, html: state.generated.html }) })
+      .then(function (res) { return res.text(); })
+      .then(function (txt) {
+        var f = txt.trim().split('\n').map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean).pop();
+        if (f && f.qa) {
+          state.generated.qa = f.qa;
+          if (f.html) state.generated.html = f.html;
+          save(); renderPreview(); toast('QA: ' + f.qa.score + '/20 (' + f.qa.band + ')');
+        } else toast('QA sem retorno.');
+      }).catch(function () { toast('Falha no QA.'); });
+  });
+
+  /* ---- Antes × Depois ---- */
+  $('#btnCompare').addEventListener('click', function () { if (state.generated) location.hash = '#/compare'; });
+  function renderCompare() {
+    if (!state.generated) { location.hash = '#/preview'; return; }
+    var lead = state.leadSource && state.leadSource.slug && window.PFStore ? PFStore.leads.get(state.leadSource.slug) : null;
+    $('#compareTitle').textContent = 'Antes × Depois' + (lead ? ' — ' + lead.nome : '');
+    $('#compareNew').srcdoc = state.generated.html;
+    var oldUrl = lead && lead.siteAntigo;
+    var ow = $('#compareOldWrap'); var ol = $('#compareOldLink');
+    if (oldUrl) {
+      ow.innerHTML = '<iframe src="' + oldUrl.replace(/"/g, '&quot;') + '" title="Site atual" referrerpolicy="no-referrer"></iframe>';
+      ol.href = oldUrl; ol.hidden = false;
+    } else {
+      ow.innerHTML = '<div class="compare-empty"><strong>Sem site para comparar</strong><span>' + escapeHtml((lead && lead.diagnostico) || 'O cliente não tem site próprio.') + '</span></div>';
+      ol.hidden = true;
+    }
+    setCompareMode(compareMode);
+  }
+  var compareMode = 'depois';
+  function setCompareMode(m) {
+    compareMode = m;
+    $('#compareCols').dataset.mode = m;
+    $$('#compareTabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.mode === m); });
+  }
+  $$('#compareTabs button').forEach(function (b) { b.addEventListener('click', function () { setCompareMode(b.dataset.mode); }); });
   $('#btnToggleCode').addEventListener('click', function () {
     var w = $('#codeWrap'); w.hidden = !w.hidden;
     if (!w.hidden) { $('#codeArea').value = state.generated.html; }
@@ -568,12 +648,14 @@
     if (!state.generated) return;
     var b = state.brief || {};
     var id = (state.leadSource && state.leadSource.slug ? state.leadSource.slug + '-' : '') + Date.now().toString(36);
+    var existingId = state.currentProjectId;
     var proj = {
-      id: id,
+      id: existingId || id,
       name: b.projectName || b.productName || 'Página',
       pageType: (state.generated.meta && state.generated.meta.pageType) || b.pageType || 'sales',
       html: state.generated.html,
       meta: state.generated.meta || {},
+      qa: state.generated.qa || null,
       leadSlug: state.leadSource && state.leadSource.slug || null,
       leadNome: state.leadSource && state.leadSource.nome || null
     };
@@ -586,8 +668,9 @@
   function openProject(id) {
     var p = window.PFStore && PFStore.projects.get(id);
     if (!p) { toast('Projeto não encontrado.'); return; }
-    state.generated = { html: p.html, meta: p.meta || {}, warnings: [], errors: [] };
+    state.generated = { html: p.html, meta: p.meta || {}, warnings: [], errors: [], qa: p.qa || null };
     state.currentProjectId = id;
+    state.leadSource = p.leadSlug ? { kind: 'lead', slug: p.leadSlug, nome: p.leadNome } : null;
     save();
     location.hash = '#/preview';
     renderPreview();

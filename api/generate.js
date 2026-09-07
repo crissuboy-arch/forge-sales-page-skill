@@ -14,6 +14,7 @@ import { sanitizeBrief } from './_lib/sanitize.js';
 import { buildMessages, buildSectionMessages, buildPlanMessages, buildRenderMessages } from './_lib/prompt.js';
 import { postprocess } from './_lib/postprocess.js';
 import { assemblePage, parseJsonLoose } from './_lib/assemble.js';
+import { impeccableQa } from './_lib/impeccable-qa.js';
 import { mockGenerate, mockPlan, mockSections } from './_lib/mock.js';
 import { readJson, methodGuard } from './_lib/http.js';
 
@@ -88,17 +89,25 @@ export default async function handler(req, res) {
       return finish({ t: 'done', ok: true, results: out, meta: { ms: Date.now() - started } });
     }
 
-    // ---------------- ASSEMBLE (sem IA) ----------------
+    // ---------------- ASSEMBLE + IMPECCABLE QA (sem IA) ----------------
     if (step === 'assemble') {
       const plan = payload.plan || {};
       const sections = payload.sections || {};
       if (!plan.sections || !Object.keys(sections).length) return finish({ t: 'error', code: 'BAD_REQUEST', error: 'assemble precisa de plan.sections e sections.' });
       const doc = assemblePage(brief, plan, sections);
       const pp = postprocess(doc, brief);
+      const qa = impeccableQa(pp.html, brief); // 1 avaliação + 1 correção
       return finish({
-        t: 'done', ok: pp.ok, html: pp.html, warnings: pp.warnings, errors: pp.errors,
+        t: 'done', ok: pp.ok, html: qa.html, warnings: pp.warnings, errors: pp.errors,
+        qa: { score: qa.score, band: qa.band, dims: qa.dims, findings: qa.findings.slice(0, 20), fixes: qa.fixes },
         meta: { provider: mock ? 'mock' : provider.name, model: payload.model || (mock ? 'mock' : provider.model), pageType: brief.pageType, scrollMode: brief.scrollMode, sensitive: brief.sensitive, affiliate: brief.affiliate, ms: Date.now() - started, step: 'assemble' },
       });
+    }
+
+    // ---------------- QA avulso (rodar Impeccable numa HTML já pronta) ----------------
+    if (step === 'qa') {
+      const qa = impeccableQa(String(payload.html || ''), brief);
+      return finish({ t: 'done', ok: true, html: qa.html, qa: { score: qa.score, band: qa.band, dims: qa.dims, findings: qa.findings.slice(0, 25), fixes: qa.fixes }, meta: { step: 'qa', ms: Date.now() - started } });
     }
 
     // ---------------- PLAN ----------------

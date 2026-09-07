@@ -2,3 +2,5 @@ output/
 examples/
 .git/
 *.zip
+.agents/
+.claude/

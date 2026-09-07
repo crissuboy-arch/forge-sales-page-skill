@@ -14,6 +14,7 @@ import { mockGenerate, mockPlan, mockSections } from '../api/_lib/mock.js';
 import { getProvider, listProviders } from '../api/_lib/providers.js';
 import { scoreLead, normalizeLead, leadToBriefing, slugify, LEAD_STATUS } from '../api/_lib/prospect.js';
 import { mockProspect, aisaConfigured } from '../api/_lib/aisa.js';
+import { impeccableQa } from '../api/_lib/impeccable-qa.js';
 
 let pass = 0;
 const t = (name, fn) => {
@@ -238,6 +239,33 @@ t('aisa: mockProspect devolve leads normalizados com score', () => {
   assert.ok(r.mock === true);
   assert.ok(r.leads.every((l) => typeof l.score === 'number' && l.slug && l.temperatura));
   assert.equal(typeof aisaConfigured(), 'boolean');
+});
+
+// ---------- IMPECCABLE QA (camada de acabamento) ----------
+t('impeccable: audita 5 dimensões e retorna score /20', () => {
+  const html = '<!DOCTYPE html><html lang="pt-BR"><head><title>t</title><style>:root{--accent:#0a5}img,svg{max-width:100%}@media (max-width:640px){body{padding:0}}@media (prefers-reduced-motion:reduce){*{transition:none}}</style></head><body><header><h1>Título</h1></header><main><p>corpo</p></main><footer>rodapé</footer></body></html>';
+  const r = impeccableQa(html, { language: 'pt-BR' });
+  assert.ok(r.score >= 0 && r.score <= 20);
+  assert.ok(['acessibilidade', 'performance', 'responsivo', 'theming', 'integridade'].every((k) => k in r.dims));
+  assert.ok(typeof r.band === 'string');
+});
+t('impeccable: aplica correções seguras (alt, viewport, reduced-motion, eyebrow)', () => {
+  const html = '<html><head><title>t</title><style>body{margin:0}</style></head><body><p class="pf-eyebrow">Kicker</p><h1>H</h1><img src="/a.png"><img src="/b.png"><p>x</p></body></html>';
+  const r = impeccableQa(html, { language: 'pt-BR' });
+  assert.ok(/<img[^>]*alt=""/.test(r.html));
+  assert.ok(/name="viewport"/.test(r.html));
+  assert.ok(/prefers-reduced-motion/.test(r.html));
+  assert.ok(!/pf-eyebrow/.test(r.html));
+  assert.ok(/loading="lazy"/.test(r.html)); // 2ª imagem
+  assert.ok(r.fixes.length >= 3);
+});
+t('impeccable: página bem-formada do assemble tem score alto', () => {
+  const { value } = sanitizeBrief({ productName: 'Aurora', description: 'programa de hábitos', checkoutUrl: 'https://pay.x/c' });
+  const plan = mockPlan(value);
+  const secs = mockSections(value, plan, plan.sections.map((s) => s.id));
+  const pp = postprocess(assemblePage(value, plan, secs), value);
+  const r = impeccableQa(pp.html, value);
+  assert.ok(r.score >= 15, `score baixo: ${r.score} — ${r.findings.map((f) => f.msg).join('; ')}`);
 });
 
 console.log(`\n${process.exitCode ? 'FALHOU' : 'OK'} — ${pass} testes passaram.`);

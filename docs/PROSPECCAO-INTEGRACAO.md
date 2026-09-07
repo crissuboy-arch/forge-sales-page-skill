@@ -23,7 +23,9 @@ GERAR REDESIGN → EDITOR VISUAL → IMPECCABLE/QA → PREVIEW ANTES×DEPOIS →
 PUBLICAR DEMONSTRAÇÃO → GERAR PROPOSTA → CRM
 ```
 
-A Fase 1 entrega do início até **CRIAR NOVA VERSÃO → PageForge recebe os dados**.
+A Fase 1 entregou do início até **CRIAR NOVA VERSÃO → PageForge recebe os dados**.
+A **Fase 2** acrescenta: redesign → **Impeccable QA** → **editor visual** →
+**antes × depois** → export.
 
 ---
 
@@ -93,11 +95,37 @@ Nenhum deles é bloqueante para a Fase 1.
 - [x] botão **Criar Nova Versão**
 - [x] lead → briefing do PageForge (automático, sem copiar/colar)
 
+## Fase 2 — editor visual · antes×depois · Impeccable (feito)
+
+### Editor visual (`public/assets/js/editor.js`)
+Portado de `maquina-de-leads/modelos/editor-visual.md` e estendido. Opera direto
+no `contentDocument` do `<iframe>` de preview (same-origin); o HTML exportado sai
+**limpo** (nenhum artefato). Recursos:
+- editar texto / título / CTA (contenteditable)
+- editar link (URL) — Alt+clique ou clique em `<a>`
+- trocar imagem (arquivo → base64)
+- cores (`--accent`, `--ink`, `--bg`, `--surface`, `--accent-ink`) e fontes (painel)
+- mostrar/ocultar seção · reordenar seção (↑ ↓)
+- **desfazer / refazer** (pilha de snapshots) · **salvar** (grava no projeto)
+
+### Antes × Depois (`#/compare`)
+Portado de `maquina-de-leads/modelos/comparador-template.html`. Dentro do
+preview/lead: **Site atual** × **Nova versão** com abas Antes / Depois / Lado a
+lado. Sem site → mensagem "maior oportunidade".
+
+### Impeccable QA (`api/_lib/impeccable-qa.js`)
+Impeccable instalado via `npx skills add https://github.com/pbakaus/impeccable`
+(fica em `.agents/skills/`, git-ignorado — ferramenta de agente). O produto tem
+uma **camada de acabamento determinística** que codifica o `audit.md` do
+Impeccable (Apache-2.0): 5 dimensões (acessibilidade, performance, responsivo,
+theming, integridade), score **/20**, severidade **P0–P3**. Roda **uma vez** no
+`assemble` (e sob demanda no botão **QA**) e aplica **uma rodada** de correções
+seguras: `alt=""`, `viewport`, `prefers-reduced-motion`, `img{max-width:100%}`,
+`loading="lazy"`, remoção de kicker/eyebrow acima de heading (ban do craft-floor).
+Fluxo: **PageForge gera → postprocess → Impeccable QA → resultado final**.
+
 ### Pendente (fases seguintes — NÃO fazer agora)
 
-- [ ] editor visual avançado
-- [ ] Impeccable (camada de design/refinamento/QA)
-- [ ] comparação antes/depois publicável
 - [ ] publicação na Vercel da demonstração do lead
 - [ ] proposta por Gmail
 - [ ] CRM avançado (follow-up, agenda, histórico)
