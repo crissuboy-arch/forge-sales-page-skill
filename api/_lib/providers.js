@@ -9,7 +9,7 @@
 const DEFAULTS = {
   nvidia: {
     baseUrl: 'https://integrate.api.nvidia.com/v1',
-    model: 'nvidia/nemotron-3.5-lightning-30b-a3b',
+    model: 'deepseek-ai/deepseek-v4-flash-0731',
   },
 };
 
@@ -18,12 +18,11 @@ const DEFAULTS = {
 // geração de pé sem exigir novo deploy. Configure NVIDIA_MODEL para fixar um.
 // Verifique o catálogo vigente em GET /api/models.
 const NVIDIA_FALLBACKS = [
-  'nvidia/nemotron-3-super-120b-a12b',
-  'deepseek-ai/deepseek-v4-flash-0731',
-  'moonshotai/kimi-k3',
+  'nvidia/nemotron-3.5-lightning-30b-a3b',
   'google/gemma-4-31b-it',
-  'mistralai/mistral-large-2-instruct',
+  'moonshotai/kimi-k3',
   'nvidia/llama-3.1-nemotron-70b-instruct',
+  'mistralai/mistral-large-2-instruct',
   'meta/llama-3.1-70b-instruct',
 ];
 
@@ -77,7 +76,7 @@ class NvidiaProvider extends AIProvider {
     return process.env.NVIDIA_MODEL ? [process.env.NVIDIA_MODEL] : out;
   }
 
-  async _callModel(model, { system, user, temperature, maxTokens, signal }) {
+  async _callModel(model, { system, user, temperature, maxTokens, signal, stream, onToken }) {
     let res;
     try {
       res = await fetch(`${this.cfg.baseUrl}/chat/completions`, {
@@ -92,7 +91,7 @@ class NvidiaProvider extends AIProvider {
           temperature,
           top_p: 0.95,
           max_tokens: maxTokens,
-          stream: false,
+          stream: Boolean(stream),
         }),
         signal,
       });
@@ -114,6 +113,39 @@ class NvidiaProvider extends AIProvider {
       throw err;
     }
 
+    if (stream && res.body) {
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      let content = '';
+      let finishReason = 'stop';
+      let usage = null;
+      let realModel = model;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          const s = line.trim();
+          if (!s || !s.startsWith('data:')) continue;
+          const payload = s.slice(5).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const j = JSON.parse(payload);
+            const d = j?.choices?.[0]?.delta?.content;
+            if (d) { content += d; if (onToken) onToken(d); }
+            if (j?.choices?.[0]?.finish_reason) finishReason = j.choices[0].finish_reason;
+            if (j?.usage) usage = j.usage;
+            if (j?.model) realModel = j.model;
+          } catch { /* linha parcial — ignora */ }
+        }
+      }
+      if (!content.trim()) throw new ProviderError(`A NVIDIA retornou stream vazio para "${model}".`, 502);
+      return { content, model: realModel, finishReason, usage };
+    }
+
     const data = await res.json();
     const choice = data?.choices?.[0];
     const content = choice?.message?.content || '';
@@ -126,7 +158,7 @@ class NvidiaProvider extends AIProvider {
     };
   }
 
-  async chat({ system, user, temperature = 0.6, maxTokens = 8000, signal, deadline = 0 } = {}) {
+  async chat({ system, user, temperature = 0.6, maxTokens = 8000, signal, deadline = 0, stream = false, onToken } = {}) {
     if (!this.isConfigured()) throw new MissingKeyError('nvidia');
 
     const models = this.candidateModels();
@@ -135,7 +167,7 @@ class NvidiaProvider extends AIProvider {
       // Não começa uma nova tentativa se já não há tempo hábil (< 12s).
       if (deadline && Date.now() > deadline - 12000 && lastErr) break;
       try {
-        return await this._callModel(model, { system, user, temperature, maxTokens, signal });
+        return await this._callModel(model, { system, user, temperature, maxTokens, signal, stream, onToken });
       } catch (err) {
         lastErr = err;
         if (err.fatal) throw err;

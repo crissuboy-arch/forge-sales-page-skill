@@ -208,66 +208,141 @@
     }).join('');
   }
 
-  /* ------------------------------------------------- generate */
-  var STAGE_LABELS = ['normalizar briefing', 'analisar produto e oferta', 'identificar avatar e consciência',
-    'definir ângulo e mecanismo', 'escolher arquitetura', 'escrever copy', 'criar direção de arte',
-    'estruturar seções', 'gerar página', 'aplicar SEO', 'aplicar compliance', 'validar CTAs e responsividade'];
-  var stageTimer = null;
+  /* ------------------------------------------------- generate (em etapas) */
+  var STAGES6 = ['Analisando briefing', 'Criando copy', 'Montando estrutura', 'Gerando página', 'Validando', 'Finalizando'];
 
-  function startStages() {
+  function renderStages() {
     var ul = $('#genStages'); ul.innerHTML = '';
-    STAGE_LABELS.forEach(function (l) {
-      var li = document.createElement('li'); li.textContent = l; ul.appendChild(li);
+    STAGES6.forEach(function (l) { var li = document.createElement('li'); li.textContent = l + '...'; ul.appendChild(li); });
+  }
+  function setStage(idx, detail) {
+    var items = $$('#genStages li');
+    items.forEach(function (li, i) {
+      li.classList.toggle('is-done', i < idx);
+      li.classList.toggle('is-active', i === idx);
+      li.textContent = STAGES6[i] + (i === idx && detail ? ' ' + detail : '...');
     });
-    var i = 0; var items = $$('#genStages li');
-    items[0].classList.add('is-active');
-    stageTimer = setInterval(function () {
-      if (i >= items.length - 1) return;
-      items[i].classList.remove('is-active'); items[i].classList.add('is-done');
-      i++; items[i].classList.add('is-active');
-    }, 3200);
   }
-  function stopStages(done) {
-    clearInterval(stageTimer); stageTimer = null;
-    if (done) $$('#genStages li').forEach(function (li) { li.classList.remove('is-active'); li.classList.add('is-done'); });
+  function allStagesDone() { $$('#genStages li').forEach(function (li) { li.classList.remove('is-active'); li.classList.add('is-done'); }); }
+
+  // Uma etapa = 1 requisição curta a /api/generate lendo o stream NDJSON.
+  // Resolve com o frame {t:'done',...}; rejeita com Error (err.code, err.isConfig).
+  function callStep(body, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var doneFrame = null;
+      fetch('/api/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) {
+          if (!r.body || !r.body.getReader) {
+            return r.json().then(function (j) { if (!j.t) j.t = (j.ok === false ? 'error' : 'done'); frame(j); endStream(); });
+          }
+          var reader = r.body.getReader(); var dec = new TextDecoder(); var buf = '';
+          function pump() {
+            return reader.read().then(function (res) {
+              if (res.value) buf += dec.decode(res.value, { stream: true });
+              var lines = buf.split('\n'); buf = lines.pop() || '';
+              lines.forEach(function (s) { s = s.trim(); if (s) { try { frame(JSON.parse(s)); } catch (e) {} } });
+              if (res.done) { if (buf.trim()) { try { frame(JSON.parse(buf.trim())); } catch (e) {} } endStream(); return; }
+              return pump();
+            });
+          }
+          return pump();
+        })
+        .catch(function (err) { fin(new Error('rede: ' + (err && err.message || err))); });
+
+      function frame(f) {
+        if (!f || settled) return;
+        if (f.t === 'progress' && onProgress) onProgress(f);
+        else if (f.t === 'done') doneFrame = f;
+        else if (f.t === 'error') {
+          var e = new Error(f.error || 'falha');
+          e.code = f.code; e.isConfig = (f.code === 'NVIDIA_KEY_MISSING'); e.retriable = f.retriable;
+          fin(e);
+        }
+      }
+      function endStream() { if (settled) return; if (doneFrame) fin(null, doneFrame); else fin(new Error('conexão encerrada antes do fim')); }
+      function fin(err, val) { if (settled) return; settled = true; if (err) reject(err); else resolve(val); }
+    });
   }
+
+  // 1 retry seguro em erro de rede / 5xx / provider retriável (não em config).
+  function callStepRetry(body, onProgress) {
+    return callStep(body, onProgress).catch(function (err) {
+      if (err.isConfig) throw err;
+      var transient = err.retriable || /rede|encerrada|PROVIDER_ERROR|BAD_PLAN|BAD_RENDER|502|503|504|429/i.test((err.code || '') + ' ' + err.message);
+      if (!transient) throw err;
+      return new Promise(function (r) { setTimeout(r, 1500); }).then(function () { return callStep(body, onProgress); });
+    });
+  }
+
+  function chunk(arr, n) { var o = []; for (var i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n)); return o; }
 
   function generate(opts) {
     opts = opts || {};
     readForm();
-    var payload = { brief: state.brief };
-    if (opts.section) { payload.mode = 'section'; payload.instruction = opts.instruction; payload.currentHtml = state.generated && state.generated.html; }
-
     location.hash = '#/generating';
-    $('#genSubtitle').textContent = opts.section ? 'Aplicando o ajuste…' : 'Isso costuma levar de 20 a 60 segundos.';
-    startStages();
+    resetGenView();
+    renderStages();
+    var kb = function (f) { return Math.max(1, Math.round((f.chars || 0) / 1024)) + ' KB'; };
 
-    fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).then(function (r) {
-      return r.json().then(function (j) { return { status: r.status, body: j }; });
-    }).then(function (res) {
-      stopStages(res.body && res.body.ok);
-      if (!res.body || (!res.body.ok && !res.body.html)) {
-        var msg = (res.body && res.body.error) || ('Falha na geração (HTTP ' + res.status + ').');
-        if (res.body && res.body.code === 'NVIDIA_KEY_MISSING') {
-          showFatal('Falta a NVIDIA_API_KEY', msg, true);
-        } else {
-          showFatal('Não deu para gerar', msg, false);
-        }
-        return;
-      }
-      state.generated = { html: res.body.html, meta: res.body.meta || {}, warnings: res.body.warnings || [], errors: res.body.errors || [] };
+    // ----- ajuste de seção no preview: uma requisição só -----
+    if (opts.section) {
+      $('#genSubtitle').textContent = 'Aplicando o ajuste…';
+      setStage(3, '');
+      callStepRetry({ brief: state.brief, mode: 'section', instruction: opts.instruction, currentHtml: state.generated && state.generated.html }, function (f) { setStage(3, '(' + kb(f) + ')'); })
+        .then(function (f) { finishOk(f, 'Ajuste aplicado.'); })
+        .catch(function (e) { fail(e); });
+      return;
+    }
+
+    // ----- geração completa em etapas -----
+    $('#genSubtitle').textContent = 'A PageForge AI está montando a página em etapas.';
+    var plan = null;
+    var sections = {};
+
+    setStage(0, '');
+    callStepRetry({ step: 'plan', brief: state.brief }, function (f) { setStage(1, '(' + kb(f) + ')'); })
+      .then(function (f) {
+        plan = f.plan;
+        var ids = (plan.sections || []).map(function (s) { return s.id; });
+        if (!ids.length) throw new Error('plano sem seções');
+        var batches = chunk(ids, 3);
+        setStage(2, '');
+        var run = Promise.resolve();
+        batches.forEach(function (batch, bi) {
+          run = run.then(function () {
+            setStage(3, '(seções ' + (bi * 3 + 1) + '–' + (bi * 3 + batch.length) + ' de ' + ids.length + ')');
+            return callStepRetry({ step: 'render', brief: state.brief, plan: plan, sectionIds: batch }, function (f) {
+              setStage(3, '(seções ' + (bi * 3 + 1) + '–' + (bi * 3 + batch.length) + ' de ' + ids.length + ', ' + kb(f) + ')');
+            }).then(function (f) { Object.keys(f.sections || {}).forEach(function (k) { sections[k] = f.sections[k]; }); });
+          });
+        });
+        return run;
+      })
+      .then(function () {
+        if (!Object.keys(sections).length) throw new Error('nenhuma seção renderizada');
+        setStage(4, '');
+        return callStepRetry({ step: 'assemble', brief: state.brief, plan: plan, sections: sections });
+      })
+      .then(function (f) {
+        setStage(5, '');
+        allStagesDone();
+        finishOk(f, 'Página gerada.');
+      })
+      .catch(function (e) { fail(e); });
+
+    function finishOk(f, msg) {
+      if (!f || !f.html) { fail(new Error((f && f.errors && f.errors.join(' ')) || 'A IA não devolveu uma página.')); return; }
+      state.generated = { html: f.html, meta: f.meta || {}, warnings: f.warnings || [], errors: f.errors || [] };
       state.generatedAt = Date.now();
       save();
       location.hash = '#/preview';
-      toast(opts.section ? 'Ajuste aplicado.' : 'Página gerada.');
-    }).catch(function (err) {
-      stopStages(false);
-      showFatal('Erro de rede', String(err && err.message || err), false);
-    });
+      toast(msg);
+    }
+    function fail(err) {
+      if (err && err.isConfig) showFatal('Falta a NVIDIA_API_KEY', err.message, true);
+      else showFatal('Não deu para gerar', (err && err.message) || 'Falha desconhecida na geração.', false);
+    }
   }
 
   function showFatal(title, message, isConfig) {

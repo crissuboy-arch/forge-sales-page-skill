@@ -131,6 +131,129 @@ Responda com o documento HTML e nada mais.`;
   return { system, user };
 }
 
+/* ============================================================================
+   GERAÇÃO EM ETAPAS (evita 1 requisição longa que estoura o limite da Vercel)
+   Etapa 1: PLANO   — análise + arquitetura + direção de arte + copy + CSS + head
+   Etapa 2: RENDER  — HTML das seções em lotes pequenos, usando o plano
+   Etapa 3: ASSEMBLE — montagem + endurecimento (sem IA, em assemble.js)
+   ==========================================================================*/
+
+const PLAN_CONTRACT = `
+## CONTRATO DE SAÍDA — PLANO (obrigatório)
+
+Devolva **um único bloco JSON** e NADA além dele (sem \`\`\`, sem texto antes/depois).
+Estrutura exata:
+
+{
+  "lang": "<idioma real, ex. pt-BR>",
+  "brandName": "<nome curto do site/produto para SEO e rodapé>",
+  "title": "<title 50-60 caracteres, benefício + marca; advertorial = título editorial>",
+  "description": "<meta description 120-160 caracteres, ativa, com a promessa>",
+  "themeColor": "<hex da cor de marca>",
+  "fontLink": "<URL completa de <link> do Google Fonts, OU string vazia se usar só system fonts>",
+  "styleTicket": { "keywords": ["3 a 5 palavras de marca"], "signature": "1 decisão visual que torna a página reconhecível" },
+  "css": "<CONTEÚDO do <style>: :root com tokens (cores AA, tipografia, espaço, raio), reset leve, base, componentes (.cta, títulos, listas, cards se houver, rodapé), .reveal + .reveal.in, e @media (max-width:640px). NÃO inclua a tag <style>. CSS próprio deste produto, não template. Sem gradient text, glow, glass decorativo, AI-purple.>",
+  "jsonld": { "@context": "https://schema.org", "@graph": [ { "@type": "Organization", "@id": "https://exemplo.com/#org", "name": "...", "url": "https://exemplo.com/" }, { "@type": "WebSite", "url": "https://exemplo.com/", "name": "...", "inLanguage": "<lang>", "publisher": { "@id": "https://exemplo.com/#org" } } ] },
+  "ctaText": "<texto do CTA primário: verbo + resultado, nunca 'comprar'>",
+  "sections": [
+    { "id": "hero", "kind": "hero", "goal": "<objetivo desta seção>", "copy": "<TODA a copy real desta seção: headline, subhead, bullets, microcopy — texto final, no idioma, específico, voz do avatar>" }
+    /* 5 a 9 seções na ordem da arquitetura escolhida para ESTE caso; a última kind:"footer" com links legais e identificação do publisher; kind possíveis: hero, problem, mechanism, product, benefits, proof, offer, bonus, guarantee, faq, cta, about, disclosure, footer */
+  ]
+}
+
+Regras: JSON válido (aspas duplas, sem comentários no JSON real, sem trailing commas). \`jsonld\` NUNCA com Review/AggregateRating/rating. Se nicho sensível: incluir disclaimers na copy das seções relevantes e uma seção kind:"disclosure". CSS e copy no máximo o necessário — é um plano enxuto, o HTML vem depois.
+`;
+
+const RENDER_CONTRACT = `
+## CONTRATO DE SAÍDA — RENDER (obrigatório)
+
+Devolva **um único bloco JSON** \`{ "<id>": "<html da seção>", ... }\` e NADA além dele.
+
+- Uma entrada por id pedido. O valor é o HTML da seção: um \`<section>\` (ou \`<header>\`/\`<footer>\` conforme o kind) semântico e acessível.
+- Use **apenas** classes/estrutura compatíveis com o CSS do plano (fornecido abaixo). Não invente utilitário que não existe no CSS.
+- Escreva a copy EXATAMENTE como está no campo "copy" do plano (pode formatar em <p>, <ul>, <h2> etc., mas não reescreva o conteúdo).
+- Um único \`<h1>\` em toda a página → só na seção hero. Demais seções usam \`<h2>\`/\`<h3>\`.
+- CTA que leva à oferta: \`<a class="cta" data-cta="primary" href="{{CHECKOUT_URL}}">\`. Pode repetir em várias seções.
+- **NÃO** inclua \`<style>\`, \`<script>\`, \`<head>\`, \`<html>\`, \`<body>\`, \`<!DOCTYPE>\`. Só o(s) elemento(s) de seção.
+- Sem \`<img src>\` externo. SVG inline / CSS / bloco com aria-label para slots visuais.
+- Sem emoji-ícone, sem "scroll ↓", sem em-dash em texto visível, sem promessa absoluta/garantia de resultado.
+`;
+
+const SYSTEM_SHORT = `${SYSTEM_IDENTITY}
+
+Você está gerando UMA ETAPA de uma página (não a página inteira). Siga o contrato de saída da etapa à risca. Guardrails de compliance continuam valendo: sem depoimento/número/autoridade inventada, sem promessa absoluta, disclaimers em nicho sensível, urgência só se real, identidade visual própria (sem gradient text / glow / glass decorativo / AI-purple / grid de cards como estrutura).`;
+
+/** Etapa 1 — plano (análise + arquitetura + direção + copy + css + head). */
+export function buildPlanMessages(brief) {
+  const corpus = buildKnowledgeCorpus({
+    pageType: brief.pageType,
+    scrollMode: brief.scrollMode,
+    affiliate: brief.affiliate,
+    sensitive: brief.sensitive,
+  });
+  const system = `${SYSTEM_IDENTITY}
+
+=================== MÉTODO FORGE + REFERÊNCIAS (sistema especialista) ===================
+${corpus}
+======================================================================================
+${PLAN_CONTRACT}`;
+
+  const user = `Monte o PLANO da página.
+
+## Formato
+${TYPE_LABEL[brief.pageType] || brief.pageType}
+
+## Intensidade de scroll
+${SCROLL_LABEL[brief.scrollMode] || brief.scrollMode}
+${brief.sensitive ? '\n> NICHO SENSÍVEL — compliance é blocker. Disclaimers obrigatórios. No máximo MOTION.' : ''}
+
+## Briefing normalizado
+${briefBlock(brief)}
+
+## Antes de escrever o JSON, faça internamente:
+1. Normalizar o briefing (lacunas → linguagem segura, sem inventar fato).
+2. Analisar produto + oferta + avatar + estágio de consciência + sofisticação de mercado.
+3. Definir ângulo e nomear o mecanismo único quando aplicável.
+4. Escolher a arquitetura de seções para ESTE caso (consciência × tráfego × ticket).
+5. Escrever a copy de cada seção no idioma "${brief.language}" — nativa, específica, voz do avatar.
+6. Style ticket: paleta (${(brief.palette || []).join(', ') || 'derive do nicho'}), par tipográfico, forma/espaço, 1 layout signature.
+
+CTA primário sugerido: ${brief.cta || '(derive verbo + resultado)'}
+Checkout/destino: ${brief.checkoutUrl || '#oferta'}
+
+Responda com o JSON do plano e nada mais.`;
+
+  return { system, user };
+}
+
+/** Etapa 2 — HTML das seções pedidas, usando o plano. */
+export function buildRenderMessages(brief, plan, ids) {
+  const wanted = (plan.sections || []).filter((s) => ids.includes(s.id));
+  const css = String(plan.css || '').slice(0, 14000);
+  const specs = wanted.map((s) => `### ${s.id}  (kind: ${s.kind})
+objetivo: ${s.goal || ''}
+copy (use este texto):
+${s.copy || ''}`).join('\n\n');
+
+  const system = `${SYSTEM_SHORT}
+${RENDER_CONTRACT}
+
+=================== CSS DO PLANO (só use classes daqui) ===================
+${css}
+=========================================================================`;
+
+  const user = `Idioma: ${plan.lang || brief.language}
+CTA primário: ${plan.ctaText || brief.cta || 'Começar agora'}  (href = {{CHECKOUT_URL}})
+
+Gere o HTML das seções a seguir (uma entrada JSON por id):
+
+${specs}
+
+Responda com o JSON { id: htmlDaSecao } e nada mais.`;
+
+  return { system, user };
+}
+
 /** Prompt de regeneração focada de uma seção. */
 export function buildSectionMessages(brief, currentHtml, instruction) {
   const { system } = buildMessages(brief);
