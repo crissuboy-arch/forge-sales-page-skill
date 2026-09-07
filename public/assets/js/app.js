@@ -69,10 +69,36 @@
     $('#mainnav').classList.remove('is-open');
     var nt = $('#navToggle'); if (nt) nt.setAttribute('aria-expanded', 'false');
     window.scrollTo(0, 0);
+    renderCrumbs(base, param);
+    try { PFStore.ui.set({ lastRoute: hash }); } catch (e) {}
+    if (id === 'view-home' && window.PFProspect) PFProspect.renderDashboard(health);
     if (id === 'view-new') renderWizard();
     if (id === 'view-preview') renderPreview();
     if (id === 'view-compare') renderCompare();
     if (window.PFProspect) PFProspect.onRoute(base, param, health);
+  }
+
+  var CRUMB_LABEL = {
+    '/new': 'Criar Página', '/prospeccao': 'Prospecção', '/leads': 'Leads', '/lead': 'Leads',
+    '/followups': 'Follow-ups', '/projetos': 'Projetos', '/config': 'Configurações',
+    '/preview': 'Preview', '/compare': 'Antes × Depois', '/generating': 'Gerando'
+  };
+  function renderCrumbs(base, param) {
+    var el = $('#crumbs'); if (!el) return;
+    if (base === '/' || base === '') { el.hidden = true; el.innerHTML = ''; return; }
+    var parts = ['<a href="#/">Dashboard</a>'];
+    if (base === '/lead') {
+      parts.push('<a href="#/leads">Leads</a>');
+      var l = param && window.PFStore && PFStore.leads.get(param);
+      parts.push('<span>' + escapeHtml(l ? l.nome : 'Lead') + '</span>');
+    } else if (base === '/compare' || base === '/preview') {
+      parts.push('<a href="#/projetos">Projetos</a>');
+      parts.push('<span>' + escapeHtml(CRUMB_LABEL[base]) + '</span>');
+    } else {
+      parts.push('<span>' + escapeHtml(CRUMB_LABEL[base] || base.replace('/', '')) + '</span>');
+    }
+    el.innerHTML = parts.join('<i>›</i>');
+    el.hidden = false;
   }
   window.addEventListener('hashchange', route);
 
@@ -88,12 +114,14 @@
 
   /* ------------------------------------------------- health (páginas + prospecção) */
   function checkHealth() {
-    health = { pages: {}, prospect: {}, demo: {} };
-    var jget = function (u) { return fetch(u).then(function (r) { return r.json(); }).catch(function () { return {}; }); };
-    Promise.all([jget('/api/health'), jget('/api/prospect'), jget('/api/demo')]).then(function (r) {
+    health = { pages: {}, prospect: {}, demo: {}, integrations: [], offline: false };
+    var jget = function (u) { return fetch(u).then(function (r) { return r.json(); }).catch(function () { return { __err: true }; }); };
+    Promise.all([jget('/api/health'), jget('/api/prospect'), jget('/api/demo'), jget('/api/integrations')]).then(function (r) {
       health.pages = r[0] || {};
       health.prospect = r[1] || {};
       health.demo = r[2] || {};
+      health.integrations = (r[3] && r[3].integrations) || [];
+      health.offline = !!(r[0] && r[0].__err) && !!(r[3] && r[3].__err);
       var hp = health.pages, pr = health.prospect;
       var fm = $('#footModel'); if (fm && hp.model) fm.textContent = 'NVIDIA · ' + hp.model;
       var hs = $('#homeStatus');
@@ -103,12 +131,17 @@
         partes.push(pr.ready ? ('Prospecção: ' + (pr.keyConfigured ? 'AIsa pronta' : 'modo exemplo')) : 'Prospecção: AISA_KEY pendente');
         hs.textContent = partes.join('  ·  ');
       }
-      if (!hp.ready || !pr.ready) {
+      if (health.offline) {
+        $('#healthBannerText').innerHTML = 'Sem conexão com o servidor. A interface continua funcionando com os dados salvos neste navegador; a geração e a prospecção voltam quando a conexão voltar.';
+        $('#healthBanner').hidden = false;
+      } else if (!hp.ready || !pr.ready) {
         var msgs = [];
         if (!hp.ready) msgs.push('<code>NVIDIA_API_KEY</code> (geração de páginas)');
         if (!pr.ready) msgs.push('<code>AISA_KEY</code> (prospecção)');
-        $('#healthBannerText').innerHTML = 'Configuração pendente na Vercel: ' + msgs.join(' e ') + '. O resto funciona em modo de exemplo.';
+        $('#healthBannerText').innerHTML = 'Configuração pendente na Vercel: ' + msgs.join(' e ') + '. O resto funciona em modo de exemplo — <a href="#/config">ver integrações</a>.';
         $('#healthBanner').hidden = false;
+      } else {
+        $('#healthBanner').hidden = true;
       }
       if (window.PFProspect) { PFProspect.renderKpis(); PFProspect.onRoute(currentBase(), currentParam(), health); }
     });
@@ -672,15 +705,78 @@
     if (window.PFProspect) PFProspect.renderKpis();
   }
 
-  function openProject(id) {
+  function openProject(id, opts) {
     var p = window.PFStore && PFStore.projects.get(id);
     if (!p) { toast('Projeto não encontrado.'); return; }
     state.generated = { html: p.html, meta: p.meta || {}, warnings: [], errors: [], qa: p.qa || null };
     state.currentProjectId = id;
+    state.brief = Object.assign({}, blank().brief, state.brief || {}, { projectName: p.name, pageType: p.pageType || 'sales' });
     state.leadSource = p.leadSlug ? { kind: 'lead', slug: p.leadSlug, nome: p.leadNome } : null;
     save();
     location.hash = '#/preview';
     renderPreview();
+    if (opts && opts.edit) {
+      setTimeout(function () { var b = $('#btnVisualEditor'); if (b) b.click(); }, 350);
+    }
+    if (opts && opts.compare) { setTimeout(function () { location.hash = '#/compare'; }, 200); }
+  }
+
+  /* ------------------------------------------------- confirm dialog */
+  function confirmDialog(message, onYes, opts) {
+    opts = opts || {};
+    var back = document.createElement('div');
+    back.className = 'modal';
+    back.innerHTML = '<div class="modal__backdrop"></div><div class="modal__box" role="alertdialog" aria-modal="true" style="max-width:440px">' +
+      '<h2 style="font-size:1.15rem">' + escapeHtml(opts.title || 'Confirmar') + '</h2>' +
+      '<p class="muted" style="font-size:.92rem">' + escapeHtml(message) + '</p>' +
+      '<div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.2rem">' +
+        '<button class="btn btn--ghost btn--sm" data-cd="no">Cancelar</button>' +
+        '<button class="btn btn--primary btn--sm" data-cd="yes">' + escapeHtml(opts.yes || 'Confirmar') + '</button>' +
+      '</div></div>';
+    document.body.appendChild(back);
+    var close = function () { back.remove(); document.removeEventListener('keydown', onKey); };
+    var onKey = function (e) { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    back.querySelector('.modal__backdrop').addEventListener('click', close);
+    back.querySelector('[data-cd="no"]').addEventListener('click', close);
+    back.querySelector('[data-cd="yes"]').addEventListener('click', function () { close(); try { onYes && onYes(); } catch (e) {} });
+  }
+
+  /* ------------------------------------------------- onboarding */
+  function maybeShowOnboarding(force) {
+    var ob = $('#onboarding'); if (!ob) return;
+    var st = {};
+    try { st = PFStore.ui.get(); } catch (e) {}
+    var hasWork = (window.PFStore && (PFStore.leads.count() || PFStore.projects.count())) || state.generated;
+    if (!force && (st.onboardingHideForever || st.onboardingDone || hasWork)) return;
+    ob.hidden = false;
+    var hide = $('#obHide'); if (hide) hide.checked = !!st.onboardingHideForever;
+  }
+  function closeOnboarding() {
+    var ob = $('#onboarding'); if (!ob) return;
+    ob.hidden = true;
+    var hideForever = $('#obHide') && $('#obHide').checked;
+    try { PFStore.ui.set({ onboardingDone: true, onboardingHideForever: !!hideForever }); } catch (e) {}
+  }
+  (function wireOnboarding() {
+    var ob = $('#onboarding'); if (!ob) return;
+    $$('[data-ob-close]', ob).forEach(function (b) { b.addEventListener('click', closeOnboarding); });
+    $$('[data-ob-go]', ob).forEach(function (b) {
+      b.addEventListener('click', function () { closeOnboarding(); location.hash = b.dataset.obGo; });
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !ob.hidden) closeOnboarding(); });
+  })();
+
+  function doExportProject(p) {
+    if (!p || !p.html) { toast('Projeto sem HTML.'); return; }
+    var saved = state.generated;
+    state.generated = { html: p.html, meta: p.meta || {}, warnings: [], errors: [] };
+    var b = state.brief;
+    var kept = { projectName: b.projectName, productName: b.productName, pageType: b.pageType };
+    state.brief = Object.assign({}, b, { projectName: p.name || b.projectName, productName: p.name || b.productName });
+    doExport();
+    state.brief = Object.assign({}, state.brief, kept);
+    state.generated = saved;
   }
 
   if (window.PFProspect) {
@@ -688,7 +784,10 @@
       toast: toast,
       toBuilder: toBuilder,
       openProject: openProject,
-      refreshKpis: function () { if (window.PFProspect) PFProspect.renderKpis(); },
+      exportProject: doExportProject,
+      confirm: confirmDialog,
+      showOnboarding: function () { maybeShowOnboarding(true); },
+      refreshKpis: function () { if (window.PFProspect) { PFProspect.renderKpis(); if (currentBase() === '/') PFProspect.renderDashboard(health); } },
       go: function (h) { location.hash = h; }
     });
   }
@@ -697,5 +796,6 @@
   checkHealth();
   if (!location.hash) location.hash = '#/';
   route();
-  if (window.PFProspect) PFProspect.renderKpis();
+  if (window.PFProspect) { PFProspect.renderKpis(); PFProspect.renderDashboard(health); }
+  maybeShowOnboarding(false);
 })();

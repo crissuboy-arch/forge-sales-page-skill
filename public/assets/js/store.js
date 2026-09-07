@@ -60,24 +60,52 @@
     };
   }
 
-  // settings: um único objeto (assinatura, contratante, padrões comerciais)
-  var SETTINGS_KEY = 'pageforge:settings:v1';
-  var settings = {
-    get: function () {
-      try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch (e) { return {}; }
-    },
-    set: function (patch) {
-      var cur = settings.get();
-      var next = Object.assign({}, cur, patch || {});
-      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)); } catch (e) {}
-      return next;
-    }
-  };
+  // objeto único (chave -> objeto). Base para settings e para o estado da UI.
+  function makeDoc(key, defaults) {
+    return {
+      key: key,
+      get: function () {
+        var v;
+        try { v = JSON.parse(localStorage.getItem(key)); } catch (e) { v = null; }
+        return Object.assign({}, defaults || {}, v && typeof v === 'object' ? v : {});
+      },
+      set: function (patch) {
+        var next = Object.assign({}, this.get(), patch || {});
+        try { localStorage.setItem(key, JSON.stringify(next)); } catch (e) {}
+        return next;
+      }
+    };
+  }
+
+  // settings: perfil + prospecção + páginas + comercial + publicação
+  var settings = makeDoc('pageforge:settings:v1', {
+    // MEU PERFIL
+    assinaturaNome: '', assinaturaEmpresa: '', assinaturaEmail: '', assinaturaWhatsapp: '',
+    assinaturaApresentacao: '', assinaturaComercial: '',
+    // PROSPECÇÃO
+    prospeccaoNicho: '', prospeccaoRegiao: '', prospeccaoQtd: '10',
+    // PÁGINAS
+    paginaIdioma: 'pt-BR', paginaCta: '', paginaScroll: 'static',
+    // COMERCIAL
+    precoPadrao: '', moeda: 'BRL', prazoPadrao: '', formaPagamento: '',
+    observacoesComerciais: '', assinaturaProposta: '',
+    // PUBLICAÇÃO
+    dominio: '', dominioDemo: '',
+    // CONTRATO
+    contratanteNome: '', contratanteDoc: '', contratanteEndereco: '', contratanteCidade: ''
+  });
+
+  // ui: estado local da interface (onboarding, dicas dispensadas, última rota)
+  var ui = makeDoc('pageforge:ui:v1', {
+    onboardingDone: false, onboardingHideForever: false, lastRoute: ''
+  });
 
   global.PFStore = {
     leads: makeStore('pageforge:leads:v1', 'slug'),
     projects: makeStore('pageforge:projects:v1', 'id'),
     settings: settings,
+    ui: ui,
+    doc: makeDoc,
     make: makeStore
   };
 })(window);

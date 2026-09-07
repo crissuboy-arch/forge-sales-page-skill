@@ -185,14 +185,85 @@ Aba com os campos de assinatura (nome, apresentação, WhatsApp, domínio) e
 contrato (razão social, CPF/CNPJ, endereço, cidade) + padrões (preço, prazo,
 forma de pagamento). Só no navegador.
 
+## Task 4 — experiência e estrutura completas (feito)
+
+Fechamento de toda a experiência **antes** de configurar as IAs reais. Tudo o
+que depende de API externa usa **MOCK/FALLBACK**; nenhuma chave é pedida ou
+guardada no navegador.
+
+### Onboarding (`public/index.html` · `app.js`)
+Modal no primeiro uso com os dois caminhos (**CRIAR UMA PÁGINA** ×
+**ENCONTRAR CLIENTES**), passos de cada fluxo e **"Não mostrar novamente"**.
+Não reaparece se já houver leads/páginas salvos. Reabrível em Configurações →
+*Rever tutorial inicial*.
+
+### Dashboard como central de trabalho (`prospect.js: renderDashboard`)
+KPIs do funil + painéis **Próximas ações** (sugestão de passo por estágio),
+**Follow-ups de hoje**, **Leads quentes** e **Projetos recentes** + ações
+rápidas (Criar página · Prospectar · Ver leads). Estado vazio quando não há
+nada.
+
+### Tela completa do lead (`prospect.js: renderLeadDetail`)
+Cabeçalho com **badge do estágio atual** + trilha de progresso. Navegação de
+seções: **Visão geral · Contatos · Diagnóstico · Site atual · Redesign ·
+Proposta/E-mail/Contrato · Histórico**. Ações principais: CRIAR NOVA VERSÃO,
+EDITAR PÁGINA, QA, ANTES × DEPOIS, PUBLICAR DEMO, GERAR PROPOSTA, CRIAR E-MAIL,
+AGENDAR FOLLOW-UP, GERAR CONTRATO. Prévia do site atual embutida (com aviso de
+fallback quando o site bloqueia iframe) e miniatura do redesign.
+
+### Projetos / Páginas (`prospect.js: renderProjetos`)
+Lista com tipo, origem, lead relacionado, datas, QA, demo. Ações: **Abrir ·
+Editar · Antes/Depois · Duplicar · Exportar · Publicar/Republicar · Excluir**.
+Reabrir um projeto restaura o trabalho no preview/editor.
+
+### Persistência e recuperação (`store.js`)
+`PFStore` ganhou `settings` (perfil, prospecção, páginas, comercial, publicação,
+contrato) e `ui` (onboarding, última rota) via `makeDoc` — mesmo contrato
+estável para trocar por nuvem depois. Autosave no briefing e nas Configurações.
+Backup **Exportar/Importar JSON** completo.
+
+### Configurações (`prospect.js: renderConfig` → `#cfgRoot`)
+Seções **Meu perfil · Prospecção · Páginas · Comercial · Publicação · Contrato**
+com autosave. **Integrações**: cards de status (`/api/integrations`) para
+NVIDIA, AIsa, Gemini, OpenAI, Groq, Gmail, Vercel Blob —
+`CONFIGURADO / NÃO CONFIGURADO / MODO EXEMPLO`. O endpoint só checa
+**presença** da variável de ambiente no servidor; **nunca** devolve valor de
+chave.
+
+### Estados da interface
+Loading, vazio, erro (com *tentar de novo*), sucesso, sem configuração
+(modo exemplo com selo **MOCK/EXEMPLO** nos leads), sem resultados, offline
+(banner), confirmação de exclusão (modal), autosave. Sem telas em branco.
+
+### Navegação e acabamento
+Menu consistente (Dashboard · Criar Página · Prospecção · Leads · Projetos ·
+Follow-ups · Configurações) + **breadcrumbs** em todas as telas internas + botões
+*voltar*. Padrão visual esmeralda / branco / grafite aplicado como camada de
+acabamento (Impeccable) — hierarquia, espaçamento, tipografia, contraste,
+cards, formulários, responsividade. Sem overflow horizontal em nenhuma view
+(desktop / tablet / mobile).
+
+### Endpoint novo
+- `api/integrations.js` — `GET /api/integrations` → status das 7 integrações,
+  presença de env var apenas, sem vazar valor.
+
+### Testes
+- `scripts/app-selftest.mjs` — 38/38.
+- e2e MOCK completo (desktop + mobile 390px): onboarding → dashboard →
+  prospectar → lead → diagnóstico → criar nova versão → builder → gerar →
+  preview → editor → salvar → QA → demo (URL pública preserva a edição) →
+  proposta → e-mail → follow-up → contrato → projetos (duplicar) →
+  configurações (autosave + integrações) → fechar/reabrir (recupera trabalho).
+  **36/36, 0 erros de console.**
+- Fase 3 e2e — sem regressão (21/21).
+
 ### Pendente (fases seguintes — NÃO fazer agora)
 
+- [ ] provider de IA definitivo (NVIDIA + Gemini/OpenAI/Groq — `api/_lib/providers.js` pronto)
 - [ ] envio automático de e-mail (Gmail API) — hoje é rascunho manual
 - [ ] assinatura eletrônica do contrato
 - [ ] domínio próprio para a demo (hoje `<host>/demo/<slug>`)
-- [ ] provider de IA definitivo (NVIDIA + Gemini/OpenAI/Groq — `api/_lib/providers.js` pronto)
 - [ ] armazenamento em nuvem dos leads/projetos (o adapter `PFStore` já isola isso)
-- [ ] auditoria final completa
 
 ---
 

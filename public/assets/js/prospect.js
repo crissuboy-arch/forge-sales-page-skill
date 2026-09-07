@@ -67,46 +67,55 @@
       if (!body.niche || !body.city) { ctx.toast('Informe nicho e cidade.'); return; }
       var btn = $('#btnProspect'); var st = $('#prospectStatus');
       btn.disabled = true; st.textContent = 'Buscando empresas… (até ~1 min)';
-      $('#prospectResults').innerHTML = '<div class="prospect-loading"><div class="gen__spin"></div><p class="muted">Consultando Google Maps, Instagram e IA…</p></div>';
+      $('#prospectResults').innerHTML = '<div class="prospect-loading"><div class="gen__spin"></div><p class="muted">Consultando Google Maps, Instagram e IA…</p><p class="tiny muted">Nicho “' + esc(body.niche) + '” em ' + esc(body.city) + ' · ' + body.count + ' resultados</p></div>';
       apiProspect(body).then(function (res) {
         btn.disabled = false;
-        if (!res || !res.ok) { st.textContent = ''; $('#prospectResults').innerHTML = notice('err', (res && res.error) || 'Falha na prospecção.'); return; }
-        st.textContent = (res.mock || res.provider === 'mock')
-          ? (res.degraded ? 'Motor AIsa indisponível — mostrando exemplos.' : 'Modo de exemplo (configure AISA_KEY para prospecção real).')
+        if (!res || !res.ok) {
+          st.textContent = '';
+          $('#prospectResults').innerHTML = notice('err', ((res && res.error) || 'Falha na prospecção.') + ' — tente de novo em instantes ou ajuste o nicho/cidade.') +
+            '<button class="btn btn--ghost btn--sm" id="btnProspectRetry" style="margin-top:.7rem">Tentar de novo</button>';
+          var rb = $('#btnProspectRetry'); if (rb) rb.addEventListener('click', function () { form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); });
+          return;
+        }
+        var isMock = !!(res.mock || res.provider === 'mock');
+        st.textContent = isMock
+          ? (res.degraded ? 'Motor AIsa indisponível agora — mostrando exemplos.' : 'Modo de exemplo (dados MOCK).')
           : res.count + ' empresas encontradas.';
-        renderResults(res.leads || [], body);
+        renderResults(res.leads || [], body, isMock);
       }).catch(function (err) {
         btn.disabled = false; st.textContent = '';
-        $('#prospectResults').innerHTML = notice('err', 'Erro de rede: ' + (err && err.message || err));
+        $('#prospectResults').innerHTML = notice('err', 'Erro de rede: ' + (err && err.message || err) + '. Verifique a conexão e tente de novo.');
       });
     });
   }
 
-  function renderResults(leads, query) {
+  function renderResults(leads, query, isMock) {
     var wrap = $('#prospectResults');
-    if (!leads.length) { wrap.innerHTML = notice('info', 'Nenhuma empresa encontrada. Tente outro nicho/cidade ou afrouxe os filtros.'); return; }
+    if (!leads.length) { wrap.innerHTML = notice('info', 'Nenhuma empresa encontrada para “' + esc(query.niche) + '” em ' + esc(query.city) + '. Tente outro nicho/cidade ou afrouxe os filtros avançados.'); return; }
     var saved = {};
     PFStore.leads.list().forEach(function (l) { saved[l.slug] = true; });
-    var html = '<div class="results-head"><span>' + leads.length + ' resultados para <strong>' + esc(query.niche) + ' em ' + esc(query.city) + '</strong></span>' +
+    var html = (isMock ? notice('info', '<strong>Resultados MOCK</strong> — dados de exemplo para percorrer o fluxo. Não são empresas reais.') : '') +
+      '<div class="results-head"><span>' + leads.length + ' resultados para <strong>' + esc(query.niche) + ' em ' + esc(query.city) + '</strong></span>' +
       '<button class="btn btn--ghost btn--sm" id="btnSaveAll">Salvar todos em Leads</button></div>';
-    html += '<div class="lead-cards">' + leads.map(function (l) { return leadCard(l, saved[l.slug]); }).join('') + '</div>';
+    html += '<div class="lead-cards">' + leads.map(function (l) { return leadCard(l, saved[l.slug], isMock); }).join('') + '</div>';
     wrap.innerHTML = html;
     $('#btnSaveAll').addEventListener('click', function () {
       PFStore.leads.upsertMany(leads.map(function (l) { return Object.assign({}, l, { status: l.status || 'novo' }); }));
       ctx.toast(leads.length + ' leads salvos.');
-      renderResults(leads, query);
+      renderResults(leads, query, isMock);
       ctx.refreshKpis();
     });
     wireCardActions(wrap, leads);
   }
 
-  function leadCard(l, isSaved) {
+  function leadCard(l, isSaved, isMock) {
     var contatos = [];
     if (l.whatsapp) contatos.push('<a href="https://wa.me/' + digits(l.whatsapp) + '" target="_blank" rel="noopener">WhatsApp</a>');
     if (l.email) contatos.push('<a href="mailto:' + esc(l.email) + '">E-mail</a>');
     if (l.instagram) contatos.push('<a href="https://instagram.com/' + esc(l.instagram) + '" target="_blank" rel="noopener">@' + esc(l.instagram) + '</a>');
     if (l.siteAntigo) contatos.push('<a href="' + esc(l.siteAntigo) + '" target="_blank" rel="noopener">Site atual</a>');
     return '<article class="lead-card" data-slug="' + esc(l.slug) + '">' +
+      (isMock ? '<span class="mock-tag">EXEMPLO</span>' : '') +
       '<div class="lead-card__top">' +
         '<div><h3>' + esc(l.nome) + '</h3><p class="lead-card__meta">' + esc(l.nicho || '') + (l.cidade ? ' · ' + esc(l.cidade) : '') + '</p></div>' +
         '<div class="lead-card__score"><span class="score-num">' + (l.score != null ? l.score : '–') + '</span>' + tempBadge(l.temperatura) + '</div>' +
@@ -241,105 +250,376 @@
     '</article>';
   }
 
+  function latestProjectForLead(slug) {
+    var arr = PFStore.projects.list(function (p) { return p.leadSlug === slug; });
+    arr.sort(function (a, b) { return (b.atualizado || '').localeCompare(a.atualizado || ''); });
+    return arr[0] || null;
+  }
+
+  // rótulo do estágio atual + posição na esteira
+  function stageInfo(l) {
+    var st = normStatus(l.status);
+    var idx = STATUS.indexOf(st);
+    return { st: st, idx: idx, label: STATUS_LABEL[st], pct: Math.round((idx / (STATUS.length - 2)) * 100) };
+  }
+
   function renderLeadDetail(slug) {
     var l = PFStore.leads.get(slug);
     var el = $('#leadDetail');
-    if (!l) { el.innerHTML = notice('err', 'Lead não encontrado.') + '<p><a href="#/leads">← Leads</a></p>'; return; }
+    if (!el) return;
+    if (!l) {
+      el.innerHTML = notice('err', 'Lead não encontrado. Ele pode ter sido removido neste navegador.') +
+        '<p style="margin-top:1rem"><a class="btn btn--ghost btn--sm" href="#/leads">← Voltar para Leads</a></p>';
+      return;
+    }
+    var proj = latestProjectForLead(slug);
+    var sg = stageInfo(l);
     var contatos = [];
     if (l.whatsapp) contatos.push('WhatsApp: <a href="https://wa.me/' + digits(l.whatsapp) + '" target="_blank" rel="noopener">' + esc(l.whatsapp) + '</a>');
     if (l.telefone && l.telefone !== l.whatsapp) contatos.push('Telefone: ' + esc(l.telefone));
     if (l.email) contatos.push('E-mail: <a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a>');
     if (l.instagram) contatos.push('Instagram: <a href="https://instagram.com/' + esc(l.instagram) + '" target="_blank" rel="noopener">@' + esc(l.instagram) + '</a>' + (l.igSeguidores ? ' (' + esc(l.igSeguidores) + ' seguidores)' : ''));
+    if (l.endereco) contatos.push('Endereço: ' + esc(l.endereco));
+
+    var NAV = [
+      ['visao', 'Visão geral'], ['contatos', 'Contatos'], ['diagnostico', 'Diagnóstico'],
+      ['site', 'Site atual'], ['redesign', 'Redesign'], ['comercial', 'Proposta · E-mail · Contrato'],
+      ['historico', 'Histórico']
+    ];
+
     el.innerHTML =
-      '<p><a href="#/leads">← Leads</a></p>' +
-      '<div class="lead-card__top" style="align-items:flex-start">' +
-        '<div><h1 style="margin-bottom:.2rem">' + esc(l.nome) + '</h1><p class="panel__lead">' + esc(l.nicho || '') + (l.cidade ? ' · ' + esc(l.cidade) : '') + '</p></div>' +
-        '<div class="lead-card__score"><span class="score-num">' + (l.score != null ? l.score : '–') + '</span>' + tempBadge(l.temperatura) + '</div>' +
+      '<div class="lead-hd">' +
+        '<div class="lead-hd__main">' +
+          '<h1>' + esc(l.nome) + '</h1>' +
+          '<p class="panel__lead">' + esc(l.nicho || 'nicho não informado') + (l.cidade ? ' · ' + esc(l.cidade) : '') + '</p>' +
+          '<div class="lead-hd__badges"><span class="stage-badge stage-badge--' + esc(sg.st) + '">Estágio: ' + esc(sg.label) + '</span>' + tempBadge(l.temperatura) +
+            (l.score != null ? '<span class="chip">Score ' + esc(l.score) + '</span>' : '') +
+            (l.demoUrl ? '<a class="chip chip--on" href="' + esc(l.demoUrl) + '" target="_blank" rel="noopener">Demo publicada ↗</a>' : '') +
+          '</div>' +
+          '<div class="stage-track"><span style="width:' + Math.max(4, sg.pct) + '%"></span></div>' +
+        '</div>' +
       '</div>' +
-      '<div class="panel">' +
-        '<h2>Dossiê</h2>' +
+
+      '<div class="lead-quick">' +
+        '<button class="btn btn--primary btn--sm" id="qaBuild">CRIAR NOVA VERSÃO</button>' +
+        (proj ? '<button class="btn btn--ghost btn--sm" id="qaEdit">EDITAR PÁGINA</button>' +
+                '<button class="btn btn--ghost btn--sm" id="qaQA">QA</button>' +
+                '<button class="btn btn--ghost btn--sm" id="qaCompare">ANTES × DEPOIS</button>' : '') +
+        '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaDemo">PUBLICAR DEMO</button>' +
+        '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaProp">GERAR PROPOSTA</button>' +
+        '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaEmail">CRIAR E-MAIL</button>' +
+        '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaFollow">AGENDAR FOLLOW-UP</button>' +
+        '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaContract">GERAR CONTRATO</button>' +
+      '</div>' +
+
+      '<nav class="lead-secnav" id="leadSecnav">' + NAV.map(function (n) {
+        return '<a href="#sec-' + n[0] + '" data-sec="' + n[0] + '">' + esc(n[1]) + '</a>';
+      }).join('') + '</nav>' +
+
+      '<section class="panel" id="sec-visao"><h2>Visão geral</h2>' +
         '<dl class="cfg-list">' +
           (l.nota != null ? '<dt>Google</dt><dd>★ ' + esc(l.nota) + ' · ' + esc(l.avaliacoes || 0) + ' avaliações</dd>' : '') +
-          '<dt>Site atual</dt><dd>' + (l.siteAntigo ? '<a href="' + esc(l.siteAntigo) + '" target="_blank" rel="noopener">' + esc(l.siteAntigo) + '</a>' : '— não tem —') + '</dd>' +
-          '<dt>Diagnóstico</dt><dd>' + esc(l.diagnostico || '—') + '</dd>' +
-          (l.abordagem ? '<dt>Abordagem sugerida</dt><dd>' + esc(l.abordagem) + '</dd>' : '') +
-          (l.endereco ? '<dt>Endereço</dt><dd>' + esc(l.endereco) + '</dd>' : '') +
-          (contatos.length ? '<dt>Contatos</dt><dd>' + contatos.join('<br>') + '</dd>' : '') +
+          '<dt>Site atual</dt><dd>' + (l.siteAntigo ? '<a href="' + esc(l.siteAntigo) + '" target="_blank" rel="noopener">' + esc(l.siteAntigo) + '</a>' : '— não tem (maior oportunidade) —') + '</dd>' +
+          '<dt>Oportunidade</dt><dd>' + esc(l.oportunidade || l.abordagem || l.diagnostico || '—') + '</dd>' +
+          '<dt>Redesign</dt><dd>' + (proj ? esc(proj.name) + ' · ' + esc((proj.atualizado || '').slice(0, 10)) + (proj.qa ? ' · QA ' + esc(proj.qa.score) + '/20' : '') : 'ainda não gerado') + '</dd>' +
           '<dt>Busca de origem</dt><dd>' + esc(l.busca || '—') + '</dd>' +
         '</dl>' +
-      '</div>' +
-      '<div class="lead-card__actions">' +
-        '<button class="btn btn--ghost btn--sm" id="ldRemove">Remover lead</button>' +
-        '<button class="btn btn--primary" id="ldBuild">CRIAR NOVA VERSÃO</button>' +
-      '</div>' +
-      '<div id="ldCommercial"></div>';
-    $('#ldRemove').addEventListener('click', function () { if (confirm('Remover ' + l.nome + '?')) { PFStore.leads.remove(slug); ctx.refreshKpis(); location.hash = '#/leads'; } });
-    $('#ldBuild').addEventListener('click', function () { toBuilderFromLead(PFStore.leads.get(slug)); });
+        '<div class="lead-card__actions" style="margin-top:1rem">' +
+          '<button class="btn btn--ghost btn--sm" id="ldRemove">Remover lead</button>' +
+        '</div>' +
+      '</section>' +
+
+      '<section class="panel" id="sec-contatos"><h2>Contatos</h2>' +
+        (contatos.length ? '<dl class="cfg-list">' + contatos.map(function (c) { var i = c.indexOf(':'); return '<dt>' + c.slice(0, i) + '</dt><dd>' + c.slice(i + 1) + '</dd>'; }).join('') + '</dl>'
+                         : notice('info', 'Nenhum contato capturado. Complete manualmente pelo site/Instagram do cliente.')) +
+      '</section>' +
+
+      '<section class="panel" id="sec-diagnostico"><h2>Diagnóstico</h2>' +
+        '<p>' + esc(l.diagnostico || 'Sem diagnóstico automático. Avalie o site atual e anote os pontos fracos.') + '</p>' +
+        (l.abordagem ? '<p><strong>Abordagem sugerida:</strong> ' + esc(l.abordagem) + '</p>' : '') +
+      '</section>' +
+
+      '<section class="panel" id="sec-site"><h2>Site atual</h2>' +
+        (l.siteAntigo
+          ? '<p class="tiny muted"><a href="' + esc(l.siteAntigo) + '" target="_blank" rel="noopener">' + esc(l.siteAntigo) + ' ↗</a> — se a prévia abaixo ficar em branco, o site bloqueia incorporação; use o link para abrir em nova aba.</p>' +
+            '<div class="site-embed"><iframe src="' + esc(l.siteAntigo) + '" title="Site atual de ' + esc(l.nome) + '" loading="lazy" referrerpolicy="no-referrer"></iframe></div>'
+          : notice('ok', 'O cliente não tem site próprio — a nova versão parte do zero, sem comparação. É a maior oportunidade de venda.')) +
+      '</section>' +
+
+      '<section class="panel" id="sec-redesign"><h2>Redesign</h2>' +
+        (proj
+          ? '<div class="redesign-row">' +
+              '<iframe class="redesign-thumb" title="Prévia do redesign" sandbox="allow-same-origin" srcdoc="' + esc(String(proj.html || '').slice(0, 200000)) + '"></iframe>' +
+              '<div><p><strong>' + esc(proj.name) + '</strong><br><span class="tiny muted">' + esc(proj.pageType || '') + ' · atualizado ' + esc((proj.atualizado || '').slice(0, 10)) + (proj.qa ? ' · QA ' + esc(proj.qa.score) + '/20 (' + esc(proj.qa.band || '') + ')' : '') + '</span></p>' +
+              '<div class="lead-card__actions">' +
+                '<button class="btn btn--primary btn--sm" id="rdOpen">Abrir no preview</button>' +
+                '<button class="btn btn--ghost btn--sm" id="rdEdit">Editor visual</button>' +
+                '<button class="btn btn--ghost btn--sm" id="rdCompare">Antes × Depois</button>' +
+                '<button class="btn btn--ghost btn--sm" id="rdExport">Exportar HTML/ZIP</button>' +
+              '</div></div>' +
+            '</div>'
+          : notice('info', 'Nenhuma página gerada para este lead ainda. Use <strong>CRIAR NOVA VERSÃO</strong> para montar o briefing automático e gerar o redesign.')) +
+      '</section>' +
+
+      '<section id="sec-comercial"><div id="ldCommercial"></div></section>' +
+
+      '<section class="panel" id="sec-historico"><h2>Histórico</h2>' +
+        ((l.historico && l.historico.length)
+          ? '<ul class="hist-list">' + l.historico.slice().reverse().map(function (h) {
+              return '<li><span>' + esc((h.at || '').slice(0, 16).replace('T', ' ')) + '</span> ' + esc(STATUS_LABEL[h.status] || h.status) + (h.nota ? ' — ' + esc(h.nota) : '') + '</li>';
+            }).join('') + '</ul>'
+          : '<p class="muted tiny">Sem eventos ainda.</p>') +
+      '</section>';
+
+    // section nav scroll-spy
+    $$('#leadSecnav a').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        var t = document.getElementById('sec-' + a.dataset.sec);
+        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    $$('[data-jump]', el).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var t = document.getElementById('sec-' + b.dataset.jump);
+        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    $('#ldRemove').addEventListener('click', function () {
+      ctx.confirm ? ctx.confirm('Remover ' + l.nome + '?', function () { PFStore.leads.remove(slug); ctx.refreshKpis(); location.hash = '#/leads'; })
+                  : (confirm('Remover ' + l.nome + '?') && (PFStore.leads.remove(slug), ctx.refreshKpis(), location.hash = '#/leads'));
+    });
+    $('#qaBuild').addEventListener('click', function () { toBuilderFromLead(PFStore.leads.get(slug)); });
+
+    if (proj) {
+      var openP = function (opts) { if (ctx.openProject) ctx.openProject(proj.id, opts); };
+      var bind = function (id, opts) { var b = $('#' + id); if (b) b.addEventListener('click', function () { openP(opts); }); };
+      bind('qaEdit', { edit: true }); bind('rdEdit', { edit: true });
+      bind('qaCompare', { compare: true }); bind('rdCompare', { compare: true });
+      bind('qaQA', {}); bind('rdOpen', {});
+      var ex = function () { if (ctx.exportProject) ctx.exportProject(proj); };
+      var re = $('#rdExport'); if (re) re.addEventListener('click', ex);
+    }
+
+    // dispara ações comerciais após o painel montar
+    function fireAfterCommercial(id) {
+      var tries = 0;
+      (function poll() {
+        var b = document.getElementById(id);
+        if (b) { document.getElementById('sec-comercial').scrollIntoView({ behavior: 'smooth' }); b.click(); return; }
+        if (tries++ < 20) setTimeout(poll, 80);
+      })();
+    }
+    $('#qaDemo').addEventListener('click', function () { fireAfterCommercial('cmPublish'); });
+    $('#qaProp').addEventListener('click', function () { fireAfterCommercial('cmProposal'); });
+    $('#qaEmail').addEventListener('click', function () { fireAfterCommercial('cmEmail'); });
+    $('#qaContract').addEventListener('click', function () { fireAfterCommercial('cmContract'); });
+    $('#qaFollow').addEventListener('click', function () {
+      var tries = 0;
+      (function poll() {
+        var b = document.getElementById('cmNextDate');
+        if (b) { document.getElementById('sec-comercial').scrollIntoView({ behavior: 'smooth' }); b.focus(); return; }
+        if (tries++ < 20) setTimeout(poll, 80);
+      })();
+    });
+
     if (window.PFCommercial) PFCommercial.renderPanel(slug, $('#ldCommercial'));
   }
 
-  /* ---------------- PROJETOS ---------------- */
+  /* ---------------- PROJETOS / PÁGINAS ---------------- */
   function renderProjetos() {
     var wrap = $('#projectsList');
+    if (!wrap) return;
     var arr = PFStore.projects.list().sort(function (a, b) { return (b.atualizado || '').localeCompare(a.atualizado || ''); });
-    if (!arr.length) { wrap.innerHTML = notice('info', 'Nenhuma página gerada ainda. Comece em <a href="#/new">Criar Página</a>.'); return; }
-    wrap.innerHTML = '<div class="lead-cards">' + arr.map(function (p) {
-      return '<article class="lead-card"><div class="lead-card__top"><div>' +
-        '<h3>' + esc(p.name || 'Página') + '</h3>' +
-        '<p class="lead-card__meta">' + esc(p.pageType || '') + (p.leadNome ? ' · lead: ' + esc(p.leadNome) : '') + ' · ' + esc((p.atualizado || '').slice(0, 10)) + '</p></div></div>' +
+    if (!arr.length) {
+      wrap.innerHTML = '<div class="empty-state">' +
+        '<h3>Nenhuma página ainda</h3>' +
+        '<p class="muted">As páginas geradas aparecem aqui, prontas para reabrir, editar, exportar ou publicar como demo.</p>' +
+        '<div class="lead-card__actions" style="justify-content:center"><a class="btn btn--primary btn--sm" href="#/new">Criar página do zero</a><a class="btn btn--ghost btn--sm" href="#/prospeccao">Prospectar clientes</a></div>' +
+        '</div>';
+      return;
+    }
+    wrap.innerHTML = '<p class="panel__lead">' + arr.length + ' página(s) neste navegador.</p><div class="lead-cards">' + arr.map(function (p) {
+      var origem = p.leadSlug ? 'redesign de lead' : 'criada do zero';
+      return '<article class="lead-card" data-pid="' + esc(p.id) + '">' +
+        '<div class="lead-card__top"><div>' +
+          '<h3>' + esc(p.name || 'Página') + '</h3>' +
+          '<p class="lead-card__meta">' + esc(p.pageType || 'sales') + ' · ' + esc(origem) + (p.leadNome ? ' (' + esc(p.leadNome) + ')' : '') + '</p>' +
+        '</div>' + (p.qa ? '<span class="chip">QA ' + esc(p.qa.score) + '/20</span>' : '') + '</div>' +
+        '<ul class="lead-card__facts">' +
+          '<li>Criada ' + esc((p.criado || p.atualizado || '').slice(0, 10)) + ' · última edição ' + esc((p.atualizado || '').slice(0, 10)) + '</li>' +
+          (p.demoUrl ? '<li>Demo: <a href="' + esc(p.demoUrl) + '" target="_blank" rel="noopener">publicada ↗</a></li>' : '<li>Demo: não publicada</li>') +
+        '</ul>' +
         '<div class="lead-card__actions">' +
-          '<button class="btn btn--primary btn--sm" data-open="' + esc(p.id) + '">Abrir no preview</button>' +
-          '<button class="chip" data-del="' + esc(p.id) + '">Excluir</button>' +
-        '</div></article>';
+          '<button class="btn btn--primary btn--sm" data-act="open">Abrir</button>' +
+          '<button class="chip" data-act="edit">Editar</button>' +
+          '<button class="chip" data-act="compare">Antes/Depois</button>' +
+          '<button class="chip" data-act="dup">Duplicar</button>' +
+          '<button class="chip" data-act="export">Exportar</button>' +
+          (p.leadSlug ? '<a class="chip" href="#/lead/' + esc(p.leadSlug) + '">Publicar / republicar</a>' : '') +
+          '<button class="chip chip--danger" data-act="del">Excluir</button>' +
+        '</div>' +
+      '</article>';
     }).join('') + '</div>';
-    $$('[data-open]', wrap).forEach(function (b) { b.addEventListener('click', function () { ctx.openProject(b.dataset.open); }); });
-    $$('[data-del]', wrap).forEach(function (b) { b.addEventListener('click', function () { PFStore.projects.remove(b.dataset.del); renderProjetos(); ctx.refreshKpis(); }); });
+
+    $$('.lead-card[data-pid]', wrap).forEach(function (card) {
+      var id = card.dataset.pid;
+      var get = function () { return PFStore.projects.get(id); };
+      $$('[data-act]', card).forEach(function (b) {
+        b.addEventListener('click', function () {
+          var p = get(); if (!p) return;
+          var a = b.dataset.act;
+          if (a === 'open') ctx.openProject(id, {});
+          else if (a === 'edit') ctx.openProject(id, { edit: true });
+          else if (a === 'compare') ctx.openProject(id, { compare: true });
+          else if (a === 'export') { if (ctx.exportProject) ctx.exportProject(p); }
+          else if (a === 'dup') {
+            var copy = Object.assign({}, p, { id: p.id + '-copy' + Date.now().toString(36), name: (p.name || 'Página') + ' (cópia)', demoUrl: '', demoSlug: '' });
+            PFStore.projects.upsert(copy); renderProjetos(); ctx.refreshKpis(); ctx.toast('Página duplicada.');
+          } else if (a === 'del') {
+            var go = function () { PFStore.projects.remove(id); renderProjetos(); ctx.refreshKpis(); ctx.toast('Página excluída.'); };
+            ctx.confirm ? ctx.confirm('Excluir "' + (p.name || 'Página') + '"? Isso não afeta arquivos já exportados.', go)
+                        : (confirm('Excluir esta página?') && go());
+          }
+        });
+      });
+    });
   }
 
   /* ---------------- CONFIG ---------------- */
-  var SETTINGS_FIELDS = [
-    ['assinaturaNome', 'Seu nome / marca', 'text'],
-    ['assinaturaApresentacao', 'Apresentação curta', 'text'],
-    ['assinaturaWhatsapp', 'Seu WhatsApp (com DDI)', 'text'],
-    ['dominio', 'Seu domínio (opcional)', 'text'],
-    ['precoPadrao', 'Preço padrão (opcional)', 'text'],
-    ['prazoPadrao', 'Prazo padrão (ex.: 10 dias)', 'text'],
-    ['formaPagamento', 'Forma de pagamento', 'text'],
-    ['contratanteNome', 'Contrato — seu nome/razão social', 'text'],
-    ['contratanteDoc', 'Contrato — seu CPF/CNPJ/NIF', 'text'],
-    ['contratanteEndereco', 'Contrato — seu endereço', 'text'],
-    ['contratanteCidade', 'Contrato — sua cidade/UF', 'text']
+  var CFG_SECTIONS = [
+    ['Meu perfil', 'Aparece na proposta, no e-mail e no contrato.', [
+      ['assinaturaNome', 'Nome', 'text'],
+      ['assinaturaEmpresa', 'Empresa / agência', 'text'],
+      ['assinaturaEmail', 'E-mail', 'text'],
+      ['assinaturaWhatsapp', 'Telefone / WhatsApp (com DDI)', 'text'],
+      ['assinaturaApresentacao', 'Apresentação curta', 'text'],
+      ['assinaturaComercial', 'Assinatura comercial', 'textarea']
+    ]],
+    ['Prospecção', 'Valores que já vêm preenchidos ao abrir a Prospecção.', [
+      ['prospeccaoNicho', 'Nicho padrão', 'text'],
+      ['prospeccaoRegiao', 'Região / cidade padrão', 'text'],
+      ['prospeccaoQtd', 'Quantidade padrão', 'text']
+    ]],
+    ['Páginas', 'Preferências do Criador de Páginas.', [
+      ['paginaIdioma', 'Idioma padrão', 'text'],
+      ['paginaCta', 'Texto de CTA padrão', 'text'],
+      ['paginaScroll', 'Intensidade de scroll padrão', 'scroll']
+    ]],
+    ['Comercial', 'Nunca inventamos preço — só usamos o que você definir aqui.', [
+      ['precoPadrao', 'Preço padrão (opcional)', 'text'],
+      ['moeda', 'Moeda', 'moeda'],
+      ['prazoPadrao', 'Prazo de entrega padrão', 'text'],
+      ['formaPagamento', 'Forma de pagamento', 'text'],
+      ['observacoesComerciais', 'Observações comerciais', 'textarea'],
+      ['assinaturaProposta', 'Assinatura da proposta', 'text']
+    ]],
+    ['Publicação', 'Onde as demos e páginas ficam publicadas.', [
+      ['dominio', 'Seu domínio (opcional)', 'text'],
+      ['dominioDemo', 'Domínio de demonstração (opcional)', 'text']
+    ]],
+    ['Contrato', 'Dados do contratante (você). O que faltar aparece para preencher à mão no contrato.', [
+      ['contratanteNome', 'Nome / razão social', 'text'],
+      ['contratanteDoc', 'CPF / CNPJ / NIF', 'text'],
+      ['contratanteEndereco', 'Endereço', 'text'],
+      ['contratanteCidade', 'Cidade / UF', 'text']
+    ]]
   ];
-  function renderConfig(health) {
-    var h = health || {};
-    var pg = h.pages || {}; var pr = h.prospect || {}; var dm = h.demo || {};
-    $('#cfgEngines').innerHTML =
-      '<dt>Criador de Páginas (IA)</dt><dd>' + (pg.ready ? ('✅ ' + esc(pg.provider || 'NVIDIA') + (pg.model ? ' · ' + esc(pg.model) : '')) : '⚠️ NVIDIA_API_KEY pendente' + (pg.mock ? ' (modo exemplo)' : '')) + '</dd>' +
-      '<dt>Prospecção (AIsa)</dt><dd>' + (pr.ready ? (pr.keyConfigured ? '✅ AISA_KEY configurada' : '🧪 modo exemplo (sem AISA_KEY)') : '⚠️ AISA_KEY pendente') + '</dd>' +
-      '<dt>Publicação de demos (Vercel Blob)</dt><dd>' + (dm.keyConfigured ? '✅ BLOB_READ_WRITE_TOKEN configurado' : (dm.mock ? '🧪 modo dev (memória)' : '⚠️ BLOB_READ_WRITE_TOKEN pendente — use Exportar HTML/ZIP')) + '</dd>' +
-      '<dt>E-mail</dt><dd>Rascunho via Gmail Compose / mailto (envio manual). Integração Gmail API: preparada, não configurada.</dd>';
+  var SCROLL_OPTS = ['static', 'light', 'motion', 'cinematic', 'storytelling'];
+  var MOEDA_OPTS = ['BRL', 'EUR', 'USD'];
 
-    var sc = $('#cfgSettings');
-    if (sc) {
-      var s = PFStore.settings.get();
-      sc.innerHTML = SETTINGS_FIELDS.map(function (f) {
-        return '<div class="field"><label>' + f[1] + '<input type="' + f[2] + '" data-s="' + f[0] + '" value="' + esc(s[f[0]] || '') + '"></label></div>';
-      }).join('') + '<button class="btn btn--primary btn--sm" id="cfgSave">Salvar configurações</button>';
-      $('#cfgSave').onclick = function () {
-        var patch = {};
-        $$('[data-s]', sc).forEach(function (i) { patch[i.dataset.s] = i.value.trim(); });
-        PFStore.settings.set(patch); ctx.toast('Configurações salvas.');
-      };
+  function fieldHtml(key, label, type, val) {
+    val = val == null ? '' : val;
+    if (type === 'textarea') return '<div class="field"><label>' + esc(label) + '<textarea data-s="' + key + '">' + esc(val) + '</textarea></label></div>';
+    if (type === 'scroll' || type === 'moeda') {
+      var opts = (type === 'scroll' ? SCROLL_OPTS : MOEDA_OPTS);
+      return '<div class="field"><label>' + esc(label) + '<select data-s="' + key + '">' + opts.map(function (o) {
+        return '<option value="' + o + '"' + (String(val) === o ? ' selected' : '') + '>' + o + '</option>';
+      }).join('') + '</select></label></div>';
     }
+    return '<div class="field"><label>' + esc(label) + '<input type="text" data-s="' + key + '" value="' + esc(val) + '"></label></div>';
+  }
+
+  function integrationCard(it) {
+    var ok = it.status === 'CONFIGURADO';
+    var mid = it.status === 'MODO EXEMPLO';
+    return '<div class="intg-card intg-card--' + (ok ? 'ok' : (mid ? 'mid' : 'off')) + '">' +
+      '<div class="intg-card__hd"><strong>' + esc(it.nome) + '</strong><span class="intg-badge">' + esc(it.status) + '</span></div>' +
+      '<p class="tiny muted">' + esc(it.papel) + '</p>' +
+      '<p class="tiny">' + esc(it.hint) + '</p>' +
+    '</div>';
+  }
+
+  function renderConfig(health) {
+    var root = $('#cfgRoot');
+    if (!root) return;
+    var h = health || {};
+    var s = PFStore.settings.get();
+    var integrations = h.integrations || [];
+
+    root.innerHTML =
+      CFG_SECTIONS.map(function (sec) {
+        return '<section class="panel"><h2>' + esc(sec[0]) + '</h2><p class="panel__lead">' + esc(sec[1]) + '</p>' +
+          '<div class="grid-2">' + sec[2].map(function (f) { return fieldHtml(f[0], f[1], f[2], s[f[0]]); }).join('') + '</div></section>';
+      }).join('') +
+      '<div class="cfg-savebar"><button class="btn btn--primary btn--sm" id="cfgSave">Salvar configurações</button><span class="tiny muted" id="cfgSaveMsg">Salvo automaticamente ao sair de cada campo.</span></div>' +
+
+      '<section class="panel"><h2>Integrações</h2>' +
+        '<p class="panel__lead">Status vindo do servidor. As chaves de API ficam <strong>apenas</strong> nas Environment Variables da Vercel — a PageForge nunca pede nem guarda chave secreta no navegador.</p>' +
+        (integrations.length
+          ? '<div class="intg-grid">' + integrations.map(integrationCard).join('') + '</div>'
+          : notice('info', 'Não consegui consultar o status das integrações (servidor offline?). Tente recarregar.')) +
+      '</section>' +
+
+      '<section class="panel"><h2>Dados locais</h2>' +
+        '<p class="tiny muted">Leads, páginas e configurações ficam neste navegador (localStorage). O adapter <code>PFStore</code> já isola isso para migrar para nuvem depois sem reescrever a interface.</p>' +
+        '<div class="lead-card__actions">' +
+          '<button class="btn btn--ghost btn--sm" id="btnExportData">Exportar tudo (JSON)</button>' +
+          '<button class="btn btn--ghost btn--sm" id="btnImportData">Importar JSON</button>' +
+          '<button class="btn btn--ghost btn--sm" id="btnReonboard">Rever tutorial inicial</button>' +
+          '<button class="btn btn--ghost btn--sm chip--danger" id="btnClearData">Limpar dados locais</button>' +
+        '</div><input type="file" id="importFile" accept="application/json" hidden>' +
+      '</section>';
+
+    function collectAndSave(quiet) {
+      var patch = {};
+      $$('[data-s]', root).forEach(function (i) { patch[i.dataset.s] = (i.value || '').trim(); });
+      PFStore.settings.set(patch);
+      if (!quiet) ctx.toast('Configurações salvas.');
+      var m = $('#cfgSaveMsg'); if (m) { m.textContent = 'Salvo ' + new Date().toLocaleTimeString().slice(0, 5) + '.'; }
+    }
+    $$('[data-s]', root).forEach(function (i) { i.addEventListener('change', function () { collectAndSave(true); }); });
+    $('#cfgSave').onclick = function () { collectAndSave(false); };
+
     $('#btnExportData').onclick = function () {
-      var data = { leads: PFStore.leads.list(), projects: PFStore.projects.list().map(function (p) { return { id: p.id, name: p.name, pageType: p.pageType, atualizado: p.atualizado }; }) };
+      var data = { v: 1, exportedAt: new Date().toISOString(), leads: PFStore.leads.list(), projects: PFStore.projects.list(), settings: PFStore.settings.get() };
       var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pageforge-dados.json';
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pageforge-backup-' + new Date().toISOString().slice(0, 10) + '.json';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 15000);
+      ctx.toast('Backup exportado.');
     };
+    $('#btnImportData').onclick = function () { $('#importFile').click(); };
+    $('#importFile').onchange = function (e) {
+      var file = e.target.files && e.target.files[0]; if (!file) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var d = JSON.parse(rd.result);
+          if (d.leads) PFStore.leads.upsertMany(d.leads);
+          if (d.projects) PFStore.projects.upsertMany(d.projects);
+          if (d.settings) PFStore.settings.set(d.settings);
+          ctx.refreshKpis(); renderConfig(health); ctx.toast('Dados importados.');
+        } catch (err) { ctx.toast('Arquivo inválido.'); }
+      };
+      rd.readAsText(file);
+    };
+    $('#btnReonboard').onclick = function () { if (ctx.showOnboarding) ctx.showOnboarding(); };
     $('#btnClearData').onclick = function () {
-      if (!confirm('Apagar TODOS os leads e projetos deste navegador?')) return;
-      PFStore.leads.clear(); PFStore.projects.clear(); ctx.refreshKpis(); ctx.toast('Dados locais apagados.');
+      var go = function () { PFStore.leads.clear(); PFStore.projects.clear(); ctx.refreshKpis(); renderConfig(health); ctx.toast('Dados locais apagados.'); };
+      ctx.confirm ? ctx.confirm('Apagar TODOS os leads e páginas deste navegador? As configurações são mantidas.', go)
+                  : (confirm('Apagar todos os leads e páginas?') && go());
     };
   }
 
@@ -394,6 +674,99 @@
     }).join('');
   }
 
+  // sugestão de próximo passo a partir do estágio
+  var NEXT_STEP = {
+    novo: ['Qualificar e diagnosticar', '#/lead/'],
+    qualificado: ['Gerar o redesign (Criar nova versão)', '#/lead/'],
+    'redesign-criado': ['Publicar a demo', '#/lead/'],
+    'demo-publicada': ['Gerar a proposta', '#/lead/'],
+    'proposta-pronta': ['Criar o e-mail e enviar', '#/lead/'],
+    'proposta-enviada': ['Follow-up', '#/lead/'],
+    'follow-up': ['Retomar contato / negociar', '#/lead/'],
+    negociacao: ['Fechar e gerar contrato', '#/lead/']
+  };
+
+  function renderDashboard(health) {
+    var host = $('#dashSections'); if (!host) return;
+    var leads = PFStore.leads.list();
+    var projects = PFStore.projects.list().sort(function (a, b) { return (b.atualizado || '').localeCompare(a.atualizado || ''); });
+    var hoje = new Date().toISOString().slice(0, 10);
+
+    var proximas = leads.filter(function (l) { return ['fechado', 'perdido'].indexOf(normStatus(l.status)) < 0; })
+      .sort(function (a, b) { return STATUS.indexOf(normStatus(a.status)) - STATUS.indexOf(normStatus(b.status)); })
+      .slice(0, 6);
+    var followHoje = leadsPrecisamFollowup().filter(function (l) { return !l.proximaAcaoData || l.proximaAcaoData <= hoje; });
+    var quentes = leads.filter(function (l) { return l.temperatura === 'quente' && ['fechado', 'perdido'].indexOf(normStatus(l.status)) < 0; })
+      .sort(function (a, b) { return (b.score || 0) - (a.score || 0); }).slice(0, 5);
+
+    if (!leads.length && !projects.length) {
+      host.innerHTML = '<div class="empty-state">' +
+        '<h3>Comece por aqui</h3>' +
+        '<p class="muted">Você ainda não tem leads nem páginas. Escolha um caminho:</p>' +
+        '<div class="lead-card__actions" style="justify-content:center">' +
+          '<a class="btn btn--primary btn--sm" href="#/prospeccao">Encontrar clientes</a>' +
+          '<a class="btn btn--ghost btn--sm" href="#/new">Criar uma página</a>' +
+        '</div></div>';
+      return;
+    }
+
+    function leadMiniCard(l, extra) {
+      var ns = NEXT_STEP[normStatus(l.status)];
+      return '<a class="dash-lead" href="#/lead/' + esc(l.slug) + '">' +
+        '<span class="dash-lead__name">' + esc(l.nome) + '</span>' +
+        '<span class="dash-lead__meta">' + (extra || (ns ? '→ ' + esc(ns[0]) : esc(statusLabel(l.status)))) + '</span>' +
+      '</a>';
+    }
+
+    host.innerHTML =
+      '<div class="dash-cols">' +
+        '<section class="dash-panel"><h3>Próximas ações</h3>' +
+          (proximas.length ? proximas.map(function (l) { return leadMiniCard(l); }).join('')
+                           : '<p class="muted tiny">Nenhum lead ativo. <a href="#/prospeccao">Prospecte</a>.</p>') +
+        '</section>' +
+        '<section class="dash-panel"><h3>Follow-ups de hoje <b>' + followHoje.length + '</b></h3>' +
+          (followHoje.length ? followHoje.slice(0, 6).map(function (l) {
+              return leadMiniCard(l, (l.proximaAcaoData && l.proximaAcaoData < hoje ? 'atrasado · ' : '') + (l.proximaAcaoData || 'sem data'));
+            }).join('') + (followHoje.length > 6 ? '<a class="dash-more" href="#/followups">ver todos →</a>' : '')
+                           : '<p class="muted tiny">Nada para acompanhar hoje. 👍</p>') +
+        '</section>' +
+        '<section class="dash-panel"><h3>Leads quentes 🔥</h3>' +
+          (quentes.length ? quentes.map(function (l) { return leadMiniCard(l, 'score ' + (l.score != null ? l.score : '–')); }).join('')
+                          : '<p class="muted tiny">Nenhum lead quente ainda.</p>') +
+        '</section>' +
+        '<section class="dash-panel"><h3>Projetos recentes</h3>' +
+          (projects.length ? projects.slice(0, 6).map(function (p) {
+              return '<a class="dash-lead" href="#" data-open-proj="' + esc(p.id) + '">' +
+                '<span class="dash-lead__name">' + esc(p.name || 'Página') + '</span>' +
+                '<span class="dash-lead__meta">' + esc(p.pageType || '') + ' · ' + esc((p.atualizado || '').slice(0, 10)) + '</span></a>';
+            }).join('') + '<a class="dash-more" href="#/projetos">ver todos →</a>'
+                           : '<p class="muted tiny">Nenhuma página. <a href="#/new">Criar</a>.</p>') +
+        '</section>' +
+      '</div>';
+
+    $$('[data-open-proj]', host).forEach(function (a) {
+      a.addEventListener('click', function (e) { e.preventDefault(); if (ctx.openProject) ctx.openProject(a.dataset.openProj, {}); });
+    });
+  }
+
+  /* ---------------- PROSPECÇÃO: estado do motor ---------------- */
+  function renderProspectMock(health) {
+    var box = $('#prospectMock'); if (!box) return;
+    var pr = (health && health.prospect) || {};
+    if (pr.ready && pr.keyConfigured) { box.innerHTML = ''; return; }
+    box.innerHTML = notice('info',
+      '<strong>Modo de exemplo.</strong> Sem <code>AISA_KEY</code> no servidor, a prospecção devolve <strong>leads MOCK</strong> realistas — claramente marcados — para você percorrer todo o fluxo (diagnóstico, redesign, demo, proposta). Configure a chave na Vercel para buscar empresas de verdade.');
+    // pré-preenche a partir das configurações
+    var s = PFStore.settings.get();
+    var form = $('#prospectForm');
+    if (form && !form.__prefilled) {
+      form.__prefilled = true;
+      if (s.prospeccaoNicho && !form.niche.value) form.niche.value = s.prospeccaoNicho;
+      if (s.prospeccaoRegiao && !form.city.value) form.city.value = s.prospeccaoRegiao;
+      if (s.prospeccaoQtd && form.count) form.count.value = s.prospeccaoQtd;
+    }
+  }
+
   function renderFollowups() {
     var wrap = $('#followupsList'); if (!wrap) return;
     var list = leadsPrecisamFollowup().sort(function (a, b) { return (a.proximaAcaoData || '9999') < (b.proximaAcaoData || '9999') ? -1 : 1; });
@@ -430,15 +803,16 @@
   global.PFProspect = {
     init: function (context) { ctx = context; },
     onRoute: function (route, param, health) {
-      if (route === '/prospeccao') { bindProspectForm(); }
+      if (route === '/prospeccao') { bindProspectForm(); renderProspectMock(health); }
       else if (route === '/leads') { renderLeadsView(); }
       else if (route === '/lead') { renderLeadDetail(param); }
       else if (route === '/projetos') { renderProjetos(); }
       else if (route === '/config') { renderConfig(health); }
       else if (route === '/followups') { renderFollowups(); }
-      if (route === '/') renderKpis();
+      if (route === '/' || route === '') { renderKpis(); renderDashboard(health); }
     },
     renderKpis: renderKpis,
+    renderDashboard: renderDashboard,
     renderFollowups: renderFollowups,
     renderLeadDetail: renderLeadDetail,
     setLeadStatus: setLeadStatus,

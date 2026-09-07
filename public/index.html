@@ -32,8 +32,8 @@
       <a href="#/new" data-route="/new">Criar Página</a>
       <a href="#/prospeccao" data-route="/prospeccao">Prospecção</a>
       <a href="#/leads" data-route="/leads">Leads</a>
-      <a href="#/followups" data-route="/followups">Follow-ups</a>
       <a href="#/projetos" data-route="/projetos">Projetos</a>
+      <a href="#/followups" data-route="/followups">Follow-ups</a>
       <a href="#/config" data-route="/config">Configurações</a>
     </nav>
     <a class="btn btn--primary btn--sm" href="#/new" data-nav="new" data-new>CRIAR NOVA PÁGINA</a>
@@ -45,46 +45,31 @@
   <div class="container" id="healthBannerText"></div>
 </div>
 
+<nav class="crumbs container" id="crumbs" aria-label="Trilha" hidden></nav>
+
 <main>
 
   <!-- ===================== DASHBOARD ===================== -->
   <section class="view is-active" id="view-home">
-    <div class="container hero" style="padding-bottom:1.5rem">
-      <p class="hero__kicker">PageForge AI</p>
-      <h1>Do lead à página pronta para vender.</h1>
-      <p class="hero__sub">Dois modos: <strong>Prospecção</strong> encontra e qualifica clientes; <strong>Criador de Páginas</strong> transforma cada um numa landing profissional.</p>
-      <div class="hero__cta">
-        <a class="btn btn--primary" href="#/prospeccao">PROSPECTAR</a>
-        <a class="btn btn--ghost" href="#/new" data-new>Criar página do zero</a>
+    <div class="container dash-hero">
+      <div class="dash-hero__in">
+        <div>
+          <p class="hero__kicker">PageForge AI</p>
+          <h1>Central de trabalho</h1>
+          <p class="hero__sub">Do lead à página pronta para vender — prospecção, redesign, demo, proposta e follow-up num lugar só.</p>
+        </div>
+        <div class="dash-hero__actions">
+          <a class="btn btn--primary" href="#/new" data-new>CRIAR PÁGINA</a>
+          <a class="btn btn--ghost" href="#/prospeccao">PROSPECTAR</a>
+          <a class="btn btn--ghost" href="#/leads">VER LEADS</a>
+        </div>
       </div>
       <p class="hero__note" id="homeStatus">Verificando os motores…</p>
     </div>
 
     <div class="container">
       <div class="kpis" id="kpis"></div>
-
-      <div class="dash-grid">
-        <a class="dash-card" href="#/prospeccao">
-          <h3>Prospecção</h3>
-          <p>Busque empresas por nicho e cidade. Cada resultado vem com nota do Google, contatos, diagnóstico do site atual e um score de oportunidade.</p>
-          <span class="dash-card__go">Abrir prospecção →</span>
-        </a>
-        <a class="dash-card" href="#/leads">
-          <h3>Leads</h3>
-          <p>Sua lista de clientes prospectados, com status e diagnóstico. O botão <em>Criar nova versão</em> manda o lead direto para o builder como briefing.</p>
-          <span class="dash-card__go">Ver leads →</span>
-        </a>
-        <a class="dash-card" href="#/new" data-new>
-          <h3>Criador de Páginas</h3>
-          <p>Sales page, presell, advertorial, captura, SaaS ou obrigado. Briefing → IA (método Forge) → preview → export HTML/ZIP. SEO e compliance embutidos.</p>
-          <span class="dash-card__go">Criar página →</span>
-        </a>
-        <a class="dash-card" href="#/projetos">
-          <h3>Projetos / Páginas</h3>
-          <p>As páginas que você já gerou, prontas para reabrir, ajustar e exportar de novo.</p>
-          <span class="dash-card__go">Ver projetos →</span>
-        </a>
-      </div>
+      <div class="dash-sections" id="dashSections"></div>
     </div>
   </section>
 
@@ -93,6 +78,7 @@
     <div class="container prospect">
       <h1>Prospecção</h1>
       <p class="panel__lead">Encontre empresas com site fraco (ou sem site) para oferecer uma landing nova. Motor: AIsa (Google Maps + Instagram + IA).</p>
+      <div id="prospectMock"></div>
 
       <form class="panel prospect-form" id="prospectForm">
         <div class="grid-3">
@@ -172,22 +158,8 @@
   <section class="view" id="view-config">
     <div class="container">
       <h1>Configurações</h1>
-      <div class="panel">
-        <h2>Motores</h2>
-        <dl class="cfg-list" id="cfgEngines"></dl>
-        <p class="tiny muted">As chaves (<code>NVIDIA_API_KEY</code> para páginas, <code>AISA_KEY</code> para prospecção) ficam apenas no servidor, nas Environment Variables da Vercel. Nunca no navegador nem no repositório.</p>
-      </div>
-      <div class="panel">
-        <h2>Seus dados (proposta, e-mail, contrato)</h2>
-        <p class="panel__lead">Usados para preencher automaticamente a proposta e o contrato. Ficam só neste navegador.</p>
-        <div id="cfgSettings"></div>
-      </div>
-      <div class="panel">
-        <h2>Dados locais</h2>
-        <p class="tiny muted">Leads e projetos ficam neste navegador (localStorage). O adapter de armazenamento está pronto para migrar para nuvem depois, sem reescrever a interface.</p>
-        <button class="btn btn--ghost btn--sm" id="btnExportData">Exportar dados (JSON)</button>
-        <button class="btn btn--ghost btn--sm" id="btnClearData">Limpar dados locais</button>
-      </div>
+      <p class="panel__lead">Seu perfil, padrões de trabalho e o estado das integrações. As chaves de API <strong>nunca</strong> ficam no navegador — só o status vem do servidor.</p>
+      <div id="cfgRoot"></div>
     </div>
   </section>
 
@@ -375,6 +347,29 @@
 </footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ===================== ONBOARDING ===================== -->
+<div class="modal" id="onboarding" hidden>
+  <div class="modal__backdrop" data-ob-close></div>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="obTitle">
+    <button class="modal__x" data-ob-close aria-label="Fechar">×</button>
+    <p class="hero__kicker">Bem-vindo à PageForge AI</p>
+    <h2 id="obTitle">O que você quer fazer primeiro?</h2>
+    <div class="ob-paths">
+      <button class="ob-path" data-ob-go="#/new">
+        <strong>CRIAR UMA PÁGINA</strong>
+        <span>Você já tem um produto/serviço. Briefing → IA → preview → exportar HTML/ZIP.</span>
+        <em>Briefing · Tipo de página · Direção visual · Gerar</em>
+      </button>
+      <button class="ob-path" data-ob-go="#/prospeccao">
+        <strong>ENCONTRAR CLIENTES</strong>
+        <span>Buscar empresas por nicho e cidade, qualificar, diagnosticar o site atual e criar uma nova versão.</span>
+        <em>Prospectar · Lead · Diagnóstico · Criar nova versão · Demo · Proposta</em>
+      </button>
+    </div>
+    <label class="ob-hide"><input type="checkbox" id="obHide"> Não mostrar novamente</label>
+  </div>
+</div>
 
 <script src="/assets/js/zipfile.js"></script>
 <script src="/assets/js/store.js"></script>
