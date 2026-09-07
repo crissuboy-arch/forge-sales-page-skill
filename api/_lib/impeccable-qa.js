@@ -112,7 +112,7 @@ export function impeccableQa(html, brief = {}) {
   /* ---------- 5. Integridade de implementação (craft-floor) ---------- */
   let integ = 4;
   // ban: kicker/eyebrow imediatamente antes de um heading → autofix (remover)
-  const eyebrowRe = /<(p|span|div)[^>]*class=["'][^"']*\b(eyebrow|kicker|pf-eyebrow|overline)\b[^"']*["'][^>]*>[\s\S]*?<\/\1>\s*(?=<h[1-3][\s>])/gi;
+  const eyebrowRe = /<(p|span|div)\b[^>]*\b(?:eyebrow|kicker|pf-eyebrow|overline)\b[^>]*>[\s\S]*?<\/\1>\s*(?=<(?:h[1-3])[\s>])/gi;
   const eyebrows = out.match(eyebrowRe) || [];
   if (eyebrows.length) {
     out = out.replace(eyebrowRe, '');
