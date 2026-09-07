@@ -9,7 +9,7 @@
 const DEFAULTS = {
   nvidia: {
     baseUrl: 'https://integrate.api.nvidia.com/v1',
-    model: 'moonshotai/kimi-k3',
+    model: 'minimaxai/minimax-m3',
   },
 };
 
@@ -18,6 +18,7 @@ const DEFAULTS = {
 // geração de pé sem exigir novo deploy. Configure NVIDIA_MODEL para fixar um.
 // Verifique o catálogo vigente em GET /api/models.
 const NVIDIA_FALLBACKS = [
+  'moonshotai/kimi-k3',
   'deepseek-ai/deepseek-v4-flash-0731',
   'nvidia/nemotron-3-super-120b-a12b',
   'deepseek-ai/deepseek-v4-pro-0813',
