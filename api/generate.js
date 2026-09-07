@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     if (step === 'plan') {
       if (mock) return finish({ t: 'done', ok: true, plan: mockPlan(brief), meta: { model: 'mock', ms: Date.now() - started } });
       const { system, user } = buildPlanMessages(brief);
-      const r = await callAI({ system, user, temperature: 0.6, maxTokens: 3200, budgetMs: 52000 });
+      const r = await callAI({ system, user, temperature: 0.6, maxTokens: 2400, budgetMs: 50000 });
       const plan = parseJsonLoose(r.content);
       if (!plan || !Array.isArray(plan.sections) || !plan.sections.length) {
         return finish({ t: 'error', code: 'BAD_PLAN', error: 'A IA não devolveu um plano válido. Tente de novo.', raw: String(r.content || '').slice(0, 1200) });
@@ -98,7 +98,7 @@ export default async function handler(req, res) {
       if (!plan.sections || !ids.length) return finish({ t: 'error', code: 'BAD_REQUEST', error: 'render precisa de plan e sectionIds.' });
       if (mock) return finish({ t: 'done', ok: true, sections: mockSections(brief, plan, ids), meta: { model: 'mock', ms: Date.now() - started } });
       const { system, user } = buildRenderMessages(brief, plan, ids);
-      const r = await callAI({ system, user, temperature: 0.5, maxTokens: 3000, budgetMs: 52000 });
+      const r = await callAI({ system, user, temperature: 0.5, maxTokens: 2800, budgetMs: 50000 });
       let out = parseJsonLoose(r.content);
       if (!out || typeof out !== 'object') {
         return finish({ t: 'error', code: 'BAD_RENDER', error: 'A IA não devolveu HTML de seção válido. Tente de novo.', raw: String(r.content || '').slice(0, 1000) });

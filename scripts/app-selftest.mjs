@@ -122,27 +122,35 @@ t('prompt: buildPlanMessages pede JSON de plano', () => {
   assert.ok(/"sections"/.test(system));
   assert.ok(/PLANO da página/i.test(user));
 });
-t('prompt: buildRenderMessages injeta CSS do plano e ids', () => {
+t('prompt: buildRenderMessages traz contrato de classes e só os ids pedidos', () => {
   const { value } = sanitizeBrief({ productName: 'X', description: 'desc longa', checkoutUrl: 'https://a.com/c' });
-  const plan = { lang: 'pt-BR', css: '.cta{color:red}', ctaText: 'Ir', sections: [{ id: 'hero', kind: 'hero', goal: 'g', copy: 'H' }, { id: 'faq', kind: 'faq', goal: 'g', copy: 'Q' }] };
+  const plan = { lang: 'pt-BR', ctaText: 'Ir', sections: [{ id: 'hero', kind: 'hero', goal: 'g', copy: 'H' }, { id: 'faq', kind: 'faq', goal: 'g', copy: 'Q' }] };
   const { system, user } = buildRenderMessages(value, plan, ['hero']);
-  assert.ok(system.includes('.cta{color:red}'));
+  assert.ok(/pf-wrap|Classes disponíveis/.test(system));
   assert.ok(user.includes('hero'));
   assert.ok(!user.includes('faq'));
 });
-t('assemble: monta documento com head/style/jsonld/base-js e ordem do plano', () => {
+t('assemble: monta documento com head/style paramétrico/jsonld/base-js e ordem do plano', () => {
   const { value } = sanitizeBrief({ productName: 'Aurora', description: 'desc', checkoutUrl: 'https://pay.x/c' });
-  const plan = { lang: 'pt-BR', brandName: 'Aurora', title: 'T', description: 'D', themeColor: '#123456', css: 'body{margin:0}', sections: [{ id: 'hero' }, { id: 'footer' }] };
-  const sections = { footer: '<footer>rodapé</footer>', hero: '<header><h1>Oi</h1><a class="cta" data-cta="primary" href="{{CHECKOUT_URL}}">x</a></header>' };
+  const plan = { lang: 'pt-BR', brandName: 'Aurora', title: 'T', description: 'D', styleTokens: { mood: 'clean', accent: '#123456' }, sections: [{ id: 'hero' }, { id: 'footer' }] };
+  const sections = { footer: '<footer class="pf-footer">rodapé</footer>', hero: '<header class="pf-hero"><div class="pf-wrap"><h1>Oi</h1><a class="cta" data-cta="primary" href="{{CHECKOUT_URL}}">x</a></div></header>' };
   const doc = assemblePage(value, plan, sections);
   assert.ok(doc.startsWith('<!DOCTYPE html>'));
-  assert.ok(doc.indexOf('<header>') < doc.indexOf('<footer>')); // ordem do plano
+  assert.ok(doc.indexOf('pf-hero') < doc.indexOf('pf-footer')); // ordem do plano
   assert.ok(doc.includes('prefers-reduced-motion'));
+  assert.ok(doc.includes('--accent:#123456'));
   assert.ok(doc.includes('application/ld+json'));
   assert.ok(doc.includes('data-cta'));
   const pp = postprocess(doc.replace(/\{\{CHECKOUT_URL\}\}/g, 'https://pay.x/c'), value);
   assert.equal(pp.ok, true, pp.errors.join(';'));
   assert.ok(pp.html.includes('https://pay.x/c'));
+});
+t('theme: buildStylesheet gera CSS com tokens e classes pf-*', async () => {
+  const { buildStylesheet } = await import('../api/_lib/theme.js');
+  const css = buildStylesheet({ mood: 'editorial', accent: '#0a5', ink: '#111' });
+  assert.ok(css.includes('.pf-wrap') && css.includes('.cta') && css.includes('.pf-faq'));
+  assert.ok(css.includes('--accent:#0a5'));
+  assert.ok(css.includes('prefers-reduced-motion'));
 });
 t('assemble: parseJsonLoose tolera cercas e trailing comma', () => {
   assert.deepEqual(parseJsonLoose('```json\n{"a":1,"b":[1,2,]}\n```'), { a: 1, b: [1, 2] });

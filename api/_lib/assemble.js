@@ -3,6 +3,8 @@
 // (reveal + propagação de rastreio + trackCTA) são controlados aqui — isso
 // remove modos de falha e garante SEO/tracking/compliance consistentes.
 
+import { buildStylesheet, normalizeTokens } from './theme.js';
+
 const CTRL = new RegExp('[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]', 'g');
 
 function esc(s) {
@@ -55,7 +57,6 @@ const BASE_JS = `<script>
 }catch(e){}})();
 </script>`;
 
-const RESET_CSS = '*,*::before,*::after{box-sizing:border-box}img,svg{max-width:100%;display:block}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}';
 
 /**
  * @param {object} brief   sanitizeBrief().value
@@ -67,7 +68,8 @@ export function assemblePage(brief, plan, sections) {
   const lang = esc(plan.lang || brief.language || 'pt-BR');
   const title = esc(String(plan.title || brief.productName || 'Página').slice(0, 70));
   const desc = esc(String(plan.description || brief.description || '').slice(0, 200));
-  const theme = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(plan.themeColor || '') ? plan.themeColor : '#111111';
+  const tokens = normalizeTokens(plan.styleTokens || {});
+  const theme = tokens.accent;
   const brand = esc(plan.brandName || brief.productName || brief.projectName || 'PageForge');
 
   let jsonld;
@@ -87,11 +89,11 @@ export function assemblePage(brief, plan, sections) {
   const order = Array.isArray(plan.sections) ? plan.sections.map((s) => s.id) : Object.keys(sections);
   const body = order.map((id) => String(sections[id] || '').trim()).filter(Boolean).join('\n\n');
 
-  const fontLink = /^https:\/\/fonts\.googleapis\.com\//.test(plan.fontLink || '')
-    ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="${esc(plan.fontLink)}" rel="stylesheet">`
+  const fontLink = tokens.fontLink
+    ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="${esc(tokens.fontLink)}" rel="stylesheet">`
     : '';
 
-  const css = String(plan.css || '').replace(/<\/?style[^>]*>/gi, '').trim();
+  const css = buildStylesheet(plan.styleTokens || {});
 
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -109,7 +111,6 @@ export function assemblePage(brief, plan, sections) {
 <meta name="twitter:card" content="summary_large_image">
 ${fontLink}
 <style>
-${RESET_CSS}
 ${css}
 </style>
 <script type="application/ld+json">${jsonld}</script>

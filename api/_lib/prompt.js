@@ -1,5 +1,6 @@
 // prompt.js — monta as mensagens (system + user) para a geração de página.
 import { buildKnowledgeCorpus } from './knowledge.js';
+import { CLASS_CONTRACT } from './theme.js';
 
 const TYPE_LABEL = {
   sales: 'Página de vendas',
@@ -149,10 +150,13 @@ Estrutura exata:
   "brandName": "<nome curto do site/produto para SEO e rodapé>",
   "title": "<title 50-60 caracteres, benefício + marca; advertorial = título editorial>",
   "description": "<meta description 120-160 caracteres, ativa, com a promessa>",
-  "themeColor": "<hex da cor de marca>",
-  "fontLink": "<URL completa de <link> do Google Fonts, OU string vazia se usar só system fonts>",
-  "styleTicket": { "keywords": ["3 a 5 palavras de marca"], "signature": "1 decisão visual que torna a página reconhecível" },
-  "css": "<CONTEÚDO do <style>: :root com tokens (cores AA, tipografia, espaço, raio), reset leve, base, componentes (.cta, títulos, listas, cards se houver, rodapé), .reveal + .reveal.in, e @media (max-width:640px). NÃO inclua a tag <style>. CSS próprio deste produto, não template. Sem gradient text, glow, glass decorativo, AI-purple.>",
+  "styleTicket": { "keywords": ["3 a 5 palavras de marca"], "signature": "1 decisão que torna a página reconhecível" },
+  "styleTokens": {
+    "mood": "<um de: editorial | clean | warm | bold | calm | tech — o que combina com nicho e avatar>",
+    "bg": "#<fundo>", "surface": "#<cards/faixas alternadas>", "ink": "#<texto principal, contraste AA sobre bg>",
+    "inkSoft": "#<texto secundário>", "line": "#<bordas>", "accent": "#<cor de marca / CTA>", "accentInk": "#<texto sobre o accent, AA>",
+    "fontLink": "<URL de <link> do Google Fonts OU string vazia>", "fontDisplay": "<nome da família de título OU vazio>", "fontText": "<nome da família de texto OU vazio>"
+  },
   "jsonld": { "@context": "https://schema.org", "@graph": [ { "@type": "Organization", "@id": "https://exemplo.com/#org", "name": "...", "url": "https://exemplo.com/" }, { "@type": "WebSite", "url": "https://exemplo.com/", "name": "...", "inLanguage": "<lang>", "publisher": { "@id": "https://exemplo.com/#org" } } ] },
   "ctaText": "<texto do CTA primário: verbo + resultado, nunca 'comprar'>",
   "sections": [
@@ -161,7 +165,7 @@ Estrutura exata:
   ]
 }
 
-Regras: JSON válido (aspas duplas, sem comentários no JSON real, sem trailing commas). \`jsonld\` NUNCA com Review/AggregateRating/rating. Se nicho sensível: incluir disclaimers na copy das seções relevantes e uma seção kind:"disclosure". CSS e copy no máximo o necessário — é um plano enxuto, o HTML vem depois.
+Regras: JSON válido (aspas duplas, sem comentários no JSON real, sem trailing commas). Você NÃO escreve CSS — só escolhe os \`styleTokens\` (um stylesheet paramétrico é montado a partir deles). Paleta com contraste AA. \`jsonld\` NUNCA com Review/AggregateRating/rating. Se nicho sensível: incluir disclaimers na copy das seções relevantes e uma seção kind:"disclosure". Copy no máximo o necessário — é um plano enxuto, o HTML vem depois.
 `;
 
 const RENDER_CONTRACT = `
@@ -229,27 +233,25 @@ Responda com o JSON do plano e nada mais.`;
 /** Etapa 2 — HTML das seções pedidas, usando o plano. */
 export function buildRenderMessages(brief, plan, ids) {
   const wanted = (plan.sections || []).filter((s) => ids.includes(s.id));
-  const css = String(plan.css || '').slice(0, 14000);
   const specs = wanted.map((s) => `### ${s.id}  (kind: ${s.kind})
 objetivo: ${s.goal || ''}
-copy (use este texto):
+copy (use este texto, sem reescrever o conteúdo):
 ${s.copy || ''}`).join('\n\n');
 
   const system = `${SYSTEM_SHORT}
 ${RENDER_CONTRACT}
 
-=================== CSS DO PLANO (só use classes daqui) ===================
-${css}
-=========================================================================`;
+=================== ${CLASS_CONTRACT} ===================`;
 
   const user = `Idioma: ${plan.lang || brief.language}
 CTA primário: ${plan.ctaText || brief.cta || 'Começar agora'}  (href = {{CHECKOUT_URL}})
+${brief.sensitive ? 'NICHO SENSÍVEL: mantenha os disclaimers da copy; nada de promessa absoluta.' : ''}
 
-Gere o HTML das seções a seguir (uma entrada JSON por id):
+Gere o HTML das seções a seguir (uma entrada JSON por id). Cada seção é um \`<section class="pf-wrap reveal">\` (ou \`<header class="pf-hero"><div class="pf-wrap reveal">\` para o hero, \`<footer class="pf-footer"><div class="pf-wrap">\` para o footer):
 
 ${specs}
 
-Responda com o JSON { id: htmlDaSecao } e nada mais.`;
+Responda com o JSON { "<id>": "<html>" } e nada mais.`;
 
   return { system, user };
 }

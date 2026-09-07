@@ -130,25 +130,14 @@ export function mockPlan(brief) {
   const accent = (brief.palette && brief.palette[0]) || '#1f5f4f';
   const bl = (brief.benefits && brief.benefits.length ? brief.benefits : ['Clareza no próximo passo', 'Um método em vez de tentativa e erro', 'Menos tempo perdido']);
   const pn = (brief.pains && brief.pains.length ? brief.pains : ['Começa e para', 'Falta um caminho claro']);
+  const hex = /^#[0-9a-f]{6}$/i.test(accent) ? accent : '#1f5f4f';
   return {
     lang: brief.language || 'pt-BR',
     brandName: name,
     title: `${name} — ${(brief.offer || brief.description || 'um caminho mais simples').slice(0, 38)}`,
     description: (brief.offer || brief.description || `Conheça ${name}.`).slice(0, 150),
-    themeColor: /^#[0-9a-f]{6}$/i.test(accent) ? accent : '#1f5f4f',
-    fontLink: '',
-    styleTicket: { keywords: ['claro', 'direto', 'confiável'], signature: 'coluna de leitura estreita + CTA fixo de cor sólida' },
-    css: `:root{--accent:${/^#[0-9a-f]{6}$/i.test(accent) ? accent : '#1f5f4f'};--ink:#16201d;--soft:#4a5652;--bg:#fbfaf7;--line:#e6e3db}
-body{margin:0;background:var(--bg);color:var(--ink);font:400 1.05rem/1.65 ui-serif,Georgia,serif}
-.wrap{max-width:60rem;margin:0 auto;padding:2.4rem 1.25rem}
-h1{font:700 clamp(2rem,1.4rem+2.4vw,3rem)/1.1 ui-sans-serif,system-ui,sans-serif;margin:.2em 0}
-h2{font:700 clamp(1.4rem,1.1rem+1vw,2rem)/1.15 ui-sans-serif,system-ui,sans-serif;margin:0 0 .6rem}
-p{max-width:40rem}
-a.cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;font-family:ui-sans-serif,system-ui,sans-serif;padding:1rem 1.5rem;border-radius:999px;min-height:44px}
-ul{padding-left:1.1rem}li{margin:.35rem 0}
-.reveal{opacity:0;transform:translateY(12px);transition:opacity .5s,transform .5s}.reveal.in{opacity:1;transform:none}
-footer{background:#f1efe8;color:var(--soft);font-size:.9rem}
-@media (max-width:640px){.wrap{padding:1.8rem 1.1rem}}`,
+    styleTicket: { keywords: ['claro', 'direto', 'confiável'], signature: 'coluna de leitura estreita + CTA de cor sólida' },
+    styleTokens: { mood: brief.sensitive ? 'calm' : 'clean', bg: '#ffffff', surface: '#f5f6f5', ink: '#16201d', inkSoft: '#55605b', line: '#e5e5e0', accent: hex, accentInk: '#ffffff', fontLink: '', fontDisplay: '', fontText: '' },
     jsonld: { '@context': 'https://schema.org', '@graph': [{ '@type': 'Organization', '@id': 'https://exemplo.com/#org', name, url: 'https://exemplo.com/' }, { '@type': 'WebSite', url: 'https://exemplo.com/', name, inLanguage: brief.language || 'pt-BR', publisher: { '@id': 'https://exemplo.com/#org' } }] },
     ctaText: brief.cta || 'Quero começar',
     sections: [
@@ -156,6 +145,7 @@ footer{background:#f1efe8;color:var(--soft);font-size:.9rem}
       { id: 'pain', kind: 'problem', goal: 'identificação', copy: pn.join('\n') },
       { id: 'benefits', kind: 'benefits', goal: 'o que muda', copy: bl.join('\n') },
       { id: 'offer', kind: 'offer', goal: 'oferta + CTA', copy: `${name}${brief.price ? ' — ' + brief.price : ''}\n${brief.guarantee || ''}` },
+      ...(brief.sensitive ? [{ id: 'disclosure', kind: 'disclosure', goal: 'isenção', copy: 'Conteúdo educativo. Resultados podem variar. Não substitui acompanhamento profissional.' }] : []),
       { id: 'footer', kind: 'footer', goal: 'legal', copy: 'Política de Privacidade · Termos de Uso · Contato' },
     ],
   };
@@ -169,13 +159,15 @@ export function mockSections(brief, plan, ids) {
     if (!ids.includes(s.id)) continue;
     const lines = String(s.copy || '').split('\n').filter(Boolean);
     if (s.kind === 'hero') {
-      out[s.id] = `<header class="wrap reveal"><h1>${esc(lines[0] || '')}</h1><p>${esc(lines[1] || '')}</p><p><a class="cta" data-cta="primary" href="${esc(checkout)}">${esc(cta)}</a></p></header>`;
+      out[s.id] = `<header class="pf-hero"><div class="pf-wrap reveal"><h1>${esc(lines[0] || '')}</h1><p class="pf-lede">${esc(lines[1] || '')}</p><p><a class="cta" data-cta="primary" href="${esc(checkout)}">${esc(cta)}</a></p></div></header>`;
     } else if (s.kind === 'footer') {
-      out[s.id] = `<footer><div class="wrap"><p>© <span id="pf-year"></span> ${esc(plan.brandName || '')}. Página independente.</p><p><a href="#privacidade">Política de Privacidade</a> · <a href="#termos">Termos de Uso</a> · <a href="#contato">Contato</a></p></div></footer>`;
+      out[s.id] = `<footer class="pf-footer"><div class="pf-wrap"><p>© <span id="pf-year"></span> ${esc(plan.brandName || '')}. Página independente.</p><p><a href="#privacidade">Política de Privacidade</a> · <a href="#termos">Termos de Uso</a> · <a href="#contato">Contato</a></p></div></footer>`;
+    } else if (s.kind === 'disclosure') {
+      out[s.id] = `<section class="pf-wrap"><p class="pf-disclosure">${esc(lines.join(' '))}</p></section>`;
     } else if (s.kind === 'offer') {
-      out[s.id] = `<section class="wrap reveal"><h2>A oferta</h2><p>${lines.map(esc).join('<br>')}</p><p><a class="cta" data-cta="primary" href="${esc(checkout)}">${esc(cta)}</a></p></section>`;
+      out[s.id] = `<section class="pf-wrap pf-alt reveal"><h2>A oferta</h2><div class="pf-offer"><p class="pf-price">${esc(lines[0] || '')}</p><p>${esc(lines.slice(1).join(' '))}</p><p><a class="cta" data-cta="primary" href="${esc(checkout)}">${esc(cta)}</a></p></div></section>`;
     } else {
-      out[s.id] = `<section class="wrap reveal"><h2>${esc(s.goal || s.id)}</h2><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></section>`;
+      out[s.id] = `<section class="pf-wrap reveal"><h2>${esc(s.goal || s.id)}</h2><ul class="pf-list">${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></section>`;
     }
   }
   return out;
