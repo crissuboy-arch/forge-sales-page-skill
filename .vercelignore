@@ -1,0 +1,4 @@
+output/
+examples/
+.git/
+*.zip

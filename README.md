@@ -1,108 +1,127 @@
-# FORGE SALES PAGE SKILL
+# PageForge AI
 
-Skill reutilizável para **Claude Code, Codex e agentes compatíveis** que
-transforma os **dados de um produto** em uma **página de vendas profissional
-completa** — copy de conversão, direção de arte própria, HTML/CSS/JS estático,
-validada e pronta para publicar.
+**Transforme uma ideia em uma página pronta para vender.**
 
-> Sem Lovable. Sem construtor pago. Sem backend obrigatório. O resultado é um
-> pacote `dist/` que você sobe em qualquer hospedagem estática.
+Plataforma web de IA que transforma o briefing de um produto em **sales pages,
+presells, advertoriais e páginas de conversão** profissionais — escritas,
+desenhadas e validadas, exportáveis como HTML estático que funciona em qualquer
+hospedagem.
 
----
+```
+ABRIR PAGEFORGE AI → CRIAR NOVA PÁGINA → BRIEFING → TIPO → ESTILO →
+GERAR COM IA → PREVIEW → EDITAR / REGERAR → EXPORTAR
+```
 
-## O que ela entrega
-
-- **Formatos:** página de vendas, presell, advertorial, página de captura,
-  página SaaS/app, página de obrigado.
-- **Copy completa:** headline, subheadline, mecanismo, dores, benefícios,
-  objeções, provas, oferta, bônus, garantia, FAQ, CTAs, fechamento.
-- **Direção de arte única por produto** — nunca o mesmo visual, nunca identidades
-  misturadas.
-- **3 modos visuais** (stack técnica):
-  - `PREMIUM STATIC` — HTML/CSS/JS leve, sofisticado, rápido (padrão).
-  - `CINEMATIC CODE` — storytelling de scroll com GSAP + Lenis quando faz sentido.
-  - `AI FILM READY` — estrutura pronta para footage de IA, funcionando hoje com placeholders.
-- **4 níveis de scroll** (camada `scroll-experience/`): `STATIC LIGHT` · `MOTION` ·
-  `CINEMATIC` · `SCROLL STORYTELLING` — a skill decide quanto a página precisa, com
-  gramática de página, curva de sentimento, pico único e gate anti-repetição.
-- **Exportação:** `dist/index.html`, `dist/assets/`, `dist/README-PUBLICAR.md`, `dist/pagina.zip`.
-- **Validação automática:** mobile, desktop, links, CTAs, checkout, imagens
-  quebradas, acessibilidade básica, performance, `prefers-reduced-motion`, e
-  **QA visual de scroll** (contact sheet + detecção de scroll morto / overflow /
-  elemento preso).
-- **Guardrails de compliance:** Google Ads, Meta Ads, sem promessas absolutas,
-  sem provas/depoimentos inventados.
+A PageForge AI é o **builder**. Cada página gerada recebe a **própria direção de
+arte** — não a identidade verde daqui. O builder e as páginas geradas são coisas
+separadas: a página exportada é um arquivo independente.
 
 ---
 
-## Como usar
+## O cérebro
 
-1. Aponte seu agente para o [`SKILL.md`](SKILL.md).
-2. Forneça os dados do produto (o agente pede o [bloco obrigatório](SKILL.md#3-perguntas-mínimas-ao-usuário)).
-3. O agente executa o [fluxo de 7 fases](SKILL.md#2-fluxo-completo-7-fases).
-4. Você recebe `output/<seu-projeto>/dist/` pronto para publicar.
+O motor de geração é a **Forge Sales Page Skill** (neste mesmo repositório:
+`SKILL.md`, `references/`, `scroll-experience/`, `templates/`, `scripts/`). O
+build compila esse conhecimento em `api/_lib/knowledge.generated.js`, e as
+funções serverless o usam como sistema especialista:
 
-### Requisitos
+- análise de oferta, avatar, mecanismo, objeções e estágio de consciência;
+- arquitetura de vendas por caso (consciência × tráfego × ticket);
+- copywriting de conversão no idioma do briefing;
+- direção de arte única por produto + regras anti-“cara de IA”;
+- SEO on-page/técnico/social + JSON-LD válido (sem `Review`/`AggregateRating`);
+- compliance Google Ads e Meta Ads;
+- camada de scroll: STATIC → MOTION → CINEMATIC → SCROLL STORYTELLING;
+- QA e exportação (`index.html` + `robots.txt` + `sitemap.xml` +
+  `site.webmanifest` + `README-PUBLICAR.md` + zip).
 
-- **Node.js ≥ 18** (só para os `scripts/`; a página em si não precisa de nada).
-- Opcional: `zip` no PATH (há fallback nativo).
-- Nenhuma chave de API. Nenhum serviço pago.
-
----
-
-## Anatomia da skill
-
-| Caminho | Papel |
-|---------|-------|
-| [`SKILL.md`](SKILL.md) | Entrada. Fluxo, perguntas mínimas, decisões de arquitetura e visual, build, export, publicação, guardrails. |
-| `schemas/product.schema.json` | Contrato dos dados de entrada normalizados (`brief.json`). |
-| `references/copywriting.md` | Frameworks (PAS, AIDA, 4Ps, Star-Story-Solution), banco de blocos, fórmulas de headline, tom por nicho, tradução benefício↔resultado. |
-| `references/sales-architecture.md` | Matriz consciência × tráfego × ticket → arquitetura. Estruturas base de cada formato. |
-| `references/offer-analysis.md` | Como dissecar avatar, oferta (value stack), mecanismo único, objeções, estágio de consciência e sofisticação de mercado. |
-| `references/visual-direction.md` | Como criar identidade única: style ticket, tokens CSS, tipografia, cor, forma, fotografia. Detalhe dos 3 modos. |
-| `references/cinematic-motion.md` | GSAP/ScrollTrigger/Lenis: padrões de scroll, orçamento de performance, `prefers-reduced-motion`, fallback estático, como vendorizar libs. |
-| `scroll-experience/` | **Camada de scroll-storytelling + direção de arte premium** (ref.: ScrollCraft). 4 níveis de scroll (STATIC LIGHT/MOTION/CINEMATIC/STORYTELLING), 8 gramáticas de página, curva de sentimento + pico único, taste floor numérico, anti-"cara de IA", fingerprint gate anti-repetição, feel check + harness `scroll-qa`. Não é engine — a stack continua sendo a de `cinematic-motion.md`. |
-| `references/presell.md` | Anatomia de presell (story-based, listicle, quiz-lite, "carta de descoberta"), quando usar cada uma, ponte para o checkout. |
-| `references/advertorial.md` | Anatomia de advertorial editorial, tom jornalístico, disclosure de publicidade, o que Google permite. |
-| `references/affiliate-pages.md` | Regras de página de afiliado: presell obrigatório, disclosure, não clonar o produtor, preservar `?aff=`/`src`. |
-| `references/compliance-google.md` | Políticas do Google Ads por categoria; termos proibidos; como escrever headline/claims dentro da política; landing page requirements. |
-| `references/compliance-meta.md` | Políticas do Meta Ads; "antes/depois" e saúde; personal attributes; como estruturar a página para aprovar. |
-| `references/checkout-integrations.md` | Kiwify, Hotmart, Digistore24, Stripe (Payment Link) e URL genérica: formato de URL, parâmetros, order bump/upsell, tracking (GA4, Meta Pixel, GTM), postback. |
-| `references/seo.md` | SEO on-page + técnico (`robots.txt`, `sitemap.xml`, `site.webmanifest`, OG image 1200×630, favicon/apple-touch), Open Graph/Twitter, JSON-LD por formato (só schema justificável — sem review/rating fake), domínio configurável (`SITE_URL` + `seo.js`), tracking ready sem IDs. |
-| `references/qa-checklist.md` | Checklist completo de QA — o que `verify.js`/`validate-links.js` automatizam e o que é manual. |
-| `templates/*/` | **Referência estrutural apenas.** Esqueleto de seções + notas de direção por vertical. A IA adapta tudo. |
-| `scripts/build.js` | `src/` → `dist/`, injeta `<head>`, minifica, gera `README-PUBLICAR.md`. |
-| `scripts/validate-links.js` | Audita links, âncoras, CTAs, URL de checkout, imagens/vídeos. |
-| `scripts/package.js` | Gera `pagina.zip` e finaliza o guia de publicação. |
-| `scripts/verify.js` | QA automatizado: acessibilidade, meta tags, **SEO técnico** (robots, JSON-LD válido sem review/rating, robots.txt/sitemap/manifest), performance, termos proibidos de compliance. |
-| `scripts/scroll-qa.js` | QA visual de scroll: navegador headless caminha o scroll, monta contact sheet, detecta scroll morto / overflow horizontal / elemento preso invisível / mídia ausente / contraste fino. Degrada para checklist manual sem navegador. |
-| `examples/` | Exemplo de `brief.json` preenchido e notas. |
-| `output/` | Saída por projeto (ignorada pelo git). |
-
-### Templates disponíveis (referência)
-
-`direct-response` · `app-saas` · `beauty` · `relationship` · `finance` ·
-`wellness` · `editorial` · `cinematic`
-
-Cada pasta tem `README.md` (quando usar, seções típicas, armadilhas) e
-`reference.html` (esqueleto semântico comentado, **sem** identidade visual — a IA
-cria a dela).
+A skill continua utilizável de forma isolada por agentes (Claude Code, Codex) —
+ver `SKILL.md`. Os scripts de QA seguem em `scripts/` (`npm run skill:*`).
 
 ---
 
-## Filosofia
+## Arquitetura
 
-1. **Analisar antes de escrever.** Avatar, oferta, mecanismo, objeções e
-   consciência definem tudo.
-2. **Uma identidade por produto.** Direção de arte criada do zero, justificada.
-3. **Conversão e velocidade não são opostos.** Página rápida converte mais e
-   custa menos no tráfego pago.
-4. **Honestidade converte e mantém a conta viva.** Guardrails de compliance
-   vêm antes do estilo.
-5. **Template é referência, não gabarito.**
+```
+api/
+  generate.js            POST — briefing → página completa (full ou regeneração de seção)
+  health.js              GET  — estado do provider de IA (nunca vaza a chave)
+  _lib/
+    providers.js         AIProvider desacoplado → NVIDIA (1º provider)
+    knowledge.js         curador: seleciona as fatias do cérebro por formato/modo
+    knowledge.generated.js   compilado de SKILL.md + references/ + scroll-experience/
+    prompt.js            monta system + user (identidade PageForge AI + contrato de saída)
+    sanitize.js          normaliza/valida o briefing; preserva #aff=
+    postprocess.js       extrai HTML, endurece <head>, remove schema falso, QA leve
+    mock.js              gerador de exemplo (só com PAGEFORGE_MOCK=1)
+    http.js              helpers das funções serverless
+public/                  o builder (estático)
+  index.html  assets/css  assets/js  robots.txt  sitemap.xml  site.webmanifest
+scripts/
+  build-knowledge.mjs    compila o cérebro (roda no build da Vercel)
+  app-selftest.mjs       testes da camada PageForge AI (Node puro, offline)
+  verify.js validate-links.js scroll-qa.js build.js package.js   (QA da skill)
+```
+
+**Provider de IA — camada desacoplada.** Hoje só NVIDIA
+(`https://integrate.api.nvidia.com/v1`, compatível com OpenAI). Para adicionar
+OpenAI / Gemini / Groq no futuro: implementar a interface `chat()` em
+`api/_lib/providers.js` e registrar no mapa `PROVIDERS` — sem tocar no resto.
 
 ---
+
+## Configuração
+
+```bash
+cp .env.example .env          # e preencha:
+# NVIDIA_API_KEY=nvapi-...
+```
+
+Opcionais (têm default, não vão no `.env.example`):
+
+| Variável | Default | Uso |
+|---|---|---|
+| `NVIDIA_MODEL` | `meta/llama-3.3-70b-instruct` | trocar o modelo NVIDIA |
+| `NVIDIA_BASE_URL` | `https://integrate.api.nvidia.com/v1` | endpoint compatível alternativo |
+| `AI_PROVIDER` | `nvidia` | provider ativo |
+| `PAGEFORGE_MOCK` | — | `1` = modo exemplo sem IA (só dev) |
+
+**A chave é usada apenas no servidor** (funções `api/`). Nunca vai para o
+frontend, o bundle, os logs ou o Git (`.env*` está no `.gitignore`).
+
+Se `NVIDIA_API_KEY` estiver ausente: o builder inteiro funciona; só a geração
+retorna uma mensagem clara de configuração.
+
+---
+
+## Rodar local
+
+```bash
+npm run build            # compila o cérebro
+npm test                 # testes da camada de IA (offline)
+
+# opção A — só o front + mock (sem Vercel CLI):
+PAGEFORGE_MOCK=1 npx vercel dev        # se tiver a CLI
+# opção B — servir /public e apontar /api para funções da Vercel:
+npx vercel dev
+```
+
+Deploy: **Vercel** (Framework: Other · Output: `public` · Build:
+`node scripts/build-knowledge.mjs`). Configurar `NVIDIA_API_KEY` em
+Project → Settings → Environment Variables.
+
+---
+
+## Segurança / compliance embutidos
+
+- Chamadas de IA server-side; segredo só no servidor; input validado e limitado;
+  timeout de 56s; mensagens amigáveis; proteção contra chave ausente.
+- Guardrails da skill sempre ativos: sem depoimento/estatística/autoridade
+  inventada, sem promessa absoluta, disclaimers em nicho sensível, urgência só
+  se real, `Review`/`AggregateRating` removidos do JSON-LD automaticamente.
+- V1 sem banco de dados: rascunho fica em `localStorage`. Arquitetura pronta
+  para adicionar persistência depois sem reconstruir o builder.
 
 ## Licença
 
-MIT — ver [`LICENSE`](LICENSE).
+MIT (`LICENSE`).

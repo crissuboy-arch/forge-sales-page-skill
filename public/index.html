@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PageForge AI — Transforme uma ideia em uma página pronta para vender</title>
+<meta name="description" content="Plataforma de IA para transformar as informações de um produto em sales pages, presells e páginas de conversão profissionais — prontas para publicar.">
+<link rel="canonical" href="https://pageforge-ai.vercel.app/">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#10B981">
+<meta property="og:type" content="website">
+<meta property="og:title" content="PageForge AI">
+<meta property="og:description" content="Transforme uma ideia em uma página pronta para vender.">
+<meta property="og:url" content="https://pageforge-ai.vercel.app/">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/pageforge.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container topbar__in">
+    <a class="brand" href="#/" data-nav="home">
+      <img class="brand__mark" src="/assets/img/mark.svg" alt="" width="30" height="30">
+      <span class="brand__name"><b>PAGE</b><span>FORGE</span><span class="brand__ai">AI</span></span>
+    </a>
+    <a class="btn btn--primary btn--sm" href="#/new" data-nav="new" data-new>CRIAR NOVA PÁGINA</a>
+  </div>
+</header>
+
+<div class="banner" id="healthBanner" hidden>
+  <div class="container" id="healthBannerText"></div>
+</div>
+
+<main>
+
+  <!-- ===================== HOME ===================== -->
+  <section class="view is-active" id="view-home">
+    <div class="container hero">
+      <p class="hero__kicker">Plataforma de IA para páginas de conversão</p>
+      <h1>Transforme uma ideia em uma página pronta para vender.</h1>
+      <p class="hero__sub">Crie sales pages, presells e páginas de conversão com inteligência artificial.</p>
+      <div class="hero__cta">
+        <a class="btn btn--primary" href="#/new" data-new>CRIAR NOVA PÁGINA</a>
+        <a class="btn btn--ghost" href="#comofunciona">Como funciona</a>
+      </div>
+      <p class="hero__note" id="homeStatus">Verificando o motor de IA…</p>
+    </div>
+
+    <div class="container" id="comofunciona">
+      <div class="steps">
+        <div class="steps__item"><div class="steps__n">01</div><h3>Briefing</h3><p>Você informa o produto, a oferta, o público e o link de destino. Só o essencial.</p></div>
+        <div class="steps__item"><div class="steps__n">02</div><h3>Tipo &amp; estilo</h3><p>Escolhe o formato (sales, presell, advertorial…) e a direção visual.</p></div>
+        <div class="steps__item"><div class="steps__n">03</div><h3>Geração com IA</h3><p>A IA analisa oferta, avatar e mecanismo, escreve a copy e monta a página.</p></div>
+        <div class="steps__item"><div class="steps__n">04</div><h3>Preview &amp; export</h3><p>Você revisa em desktop/tablet/mobile, ajusta, e exporta o pacote pronto.</p></div>
+      </div>
+
+      <div class="pitch">
+        <h2>O cérebro da Forge Sales Page Skill, agora numa aplicação web.</h2>
+        <p class="muted" style="color:#b9c1bb">A PageForge AI é o <strong>builder</strong>. Cada página gerada recebe a própria direção de arte — não a identidade verde daqui.</p>
+        <ul>
+          <li>Análise de oferta, avatar, mecanismo e estágio de consciência</li>
+          <li>Arquitetura de vendas por caso (consciência × tráfego × ticket)</li>
+          <li>Copywriting de conversão no idioma do briefing</li>
+          <li>Direção de arte única por produto + anti-“cara de IA”</li>
+          <li>SEO técnico, Open Graph e JSON-LD válido (sem review/rating falso)</li>
+          <li>Compliance Google Ads e Meta Ads embutido</li>
+          <li>Camada de scroll: STATIC → MOTION → CINEMATIC → STORYTELLING</li>
+          <li>Exportação: <code>index.html</code> + robots + sitemap + manifest + zip</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== WIZARD ===================== -->
+  <section class="view" id="view-new">
+    <div class="container wizard">
+      <div class="stepper" id="stepper"></div>
+      <div class="wizard__grid">
+        <form id="briefForm">
+          <!-- STEP 1 -->
+          <div class="panel wizard-step" data-step="0">
+            <h2>Briefing</h2>
+            <p class="panel__lead">Preencha o que souber. O que faltar, a IA infere com linguagem segura — sem inventar fato.</p>
+            <div class="grid-2">
+              <div class="field"><label>Nome do projeto <span class="hint">interno</span><input type="text" name="projectName" autocomplete="off"></label></div>
+              <div class="field"><label>Nome do produto<input type="text" name="productName" autocomplete="off"></label></div>
+            </div>
+            <div class="field"><label>Descrição <span class="hint">o que é, em 1–3 frases</span><textarea name="description"></textarea></label></div>
+            <div class="grid-2">
+              <div class="field"><label>Nicho / mercado<input type="text" name="niche"></label></div>
+              <div class="field"><label>Idioma<input type="text" name="language" value="pt-BR"></label></div>
+            </div>
+            <div class="field"><label>Público / avatar <span class="hint">quem é, dor principal</span><textarea name="audience"></textarea></label></div>
+            <div class="field"><label>Oferta <span class="hint">o que a pessoa recebe</span><textarea name="offer"></textarea></label></div>
+            <div class="grid-2">
+              <div class="field"><label>Preço<input type="text" name="price" placeholder="R$ 197 / 12x de R$ 19"></label></div>
+              <div class="field"><label>Texto do CTA<input type="text" name="cta" placeholder="Quero começar"></label></div>
+            </div>
+            <div class="field"><label>Benefícios <span class="hint">um por linha</span><textarea name="benefits"></textarea></label></div>
+            <div class="field"><label>Dores <span class="hint">um por linha</span><textarea name="pains"></textarea></label></div>
+            <div class="field"><label>Diferenciais <span class="hint">um por linha</span><textarea name="differentiators"></textarea></label></div>
+            <div class="field"><label>Mecanismo único <span class="hint">o “como” diferente</span><textarea name="mechanism"></textarea></label></div>
+            <div class="field"><label>Garantia<input type="text" name="guarantee" placeholder="7 dias, incondicional"></label></div>
+            <div class="field"><label>Provas reais <span class="hint">só o que puder comprovar — uma por linha</span><textarea name="proof"></textarea></label></div>
+            <div class="grid-2">
+              <div class="field"><label>URL de checkout / destino<input type="url" name="checkoutUrl" placeholder="https://…"></label></div>
+              <div class="field"><label>Plataforma
+                <select name="checkoutPlatform">
+                  <option value="generic">Genérica / outra</option>
+                  <option value="kiwify">Kiwify</option>
+                  <option value="hotmart">Hotmart</option>
+                  <option value="digistore24">Digistore24</option>
+                  <option value="stripe">Stripe</option>
+                </select>
+              </label></div>
+            </div>
+            <div class="field"><label>Link de afiliado <span class="hint">se for página de afiliado — o fragmento #aff= é preservado</span><input type="url" name="affiliateUrl" placeholder="https://…#aff=…"></label></div>
+            <div class="field"><label>Referências / observações<textarea name="notes"></textarea></label></div>
+          </div>
+
+          <!-- STEP 2 -->
+          <div class="panel wizard-step" data-step="1" hidden>
+            <h2>Tipo de página</h2>
+            <p class="panel__lead">A IA ajusta a arquitetura ao formato escolhido.</p>
+            <div class="choice" id="typeChoice">
+              <label class="choice__c"><input type="radio" name="pageType" value="sales" checked><span>Sales Page<small>venda direta no checkout</small></span></label>
+              <label class="choice__c"><input type="radio" name="pageType" value="presell"><span>Presell<small>ponte antes do checkout</small></span></label>
+              <label class="choice__c"><input type="radio" name="pageType" value="advertorial"><span>Advertorial<small>matéria editorial que converte</small></span></label>
+              <label class="choice__c"><input type="radio" name="pageType" value="optin"><span>Página de Captura<small>troca e-mail por isca</small></span></label>
+              <label class="choice__c"><input type="radio" name="pageType" value="saas"><span>SaaS / App<small>ativação, trial, planos</small></span></label>
+              <label class="choice__c"><input type="radio" name="pageType" value="thankyou"><span>Página de Obrigado<small>confirmação e próximos passos</small></span></label>
+            </div>
+            <div class="field" style="margin-top:1.4rem"><label>Tipo de tráfego <span class="hint">ajuda a IA a calibrar</span>
+              <select name="trafficType">
+                <option value="">Não sei / você decide</option>
+                <option value="organic">Orgânico</option>
+                <option value="google-ads">Google Ads</option>
+                <option value="meta-ads">Meta Ads</option>
+                <option value="affiliate">Afiliado</option>
+              </select>
+            </label></div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div class="panel wizard-step" data-step="2" hidden>
+            <h2>Direção visual</h2>
+            <p class="panel__lead">A página gerada tem identidade própria. Aqui você só orienta.</p>
+            <div class="field"><label>Paleta <span class="hint">cores (hex ou nome), separadas por vírgula — opcional</span><input type="text" name="palette" placeholder="#0f172a, #e11d48, off-white"></label></div>
+            <div class="field"><label>Palavras-chave de estilo <span class="hint">ex.: clínico, calmo, editorial — uma por linha ou vírgula</span><textarea name="styleKeywords"></textarea></label></div>
+            <div class="field"><label>Referências / direção de arte <span class="hint">marcas admiradas, links, o que evitar</span><textarea name="artDirection"></textarea></label></div>
+            <h3 style="margin-top:1.4rem;font-size:1rem">Intensidade de scroll</h3>
+            <div class="choice" id="scrollChoice">
+              <label class="choice__c"><input type="radio" name="scrollMode" value="static" checked><span>Static<small>reveal discreto por CSS</small></span></label>
+              <label class="choice__c"><input type="radio" name="scrollMode" value="light"><span>Light<small>reveal + stagger sutil</small></span></label>
+              <label class="choice__c"><input type="radio" name="scrollMode" value="motion"><span>Motion<small>+ 1 parallax discreto</small></span></label>
+              <label class="choice__c"><input type="radio" name="scrollMode" value="cinematic"><span>Cinematic<small>pins curtos + scrub</small></span></label>
+              <label class="choice__c"><input type="radio" name="scrollMode" value="storytelling"><span>Scroll Storytelling<small>a página é a narrativa</small></span></label>
+            </div>
+            <p class="tiny muted" style="margin-top:.6rem">Advertorial, captura e obrigado são limitados a Motion. Sob <code>prefers-reduced-motion</code> a página cai para Static sozinha.</p>
+          </div>
+
+          <!-- STEP 4 -->
+          <div class="panel wizard-step" data-step="3" hidden>
+            <h2>Gerar página com IA</h2>
+            <p class="panel__lead">A IA vai rodar o pipeline completo: análise → copy → arquitetura → direção de arte → página → SEO → compliance → validação.</p>
+            <div id="genPreflight"></div>
+            <button type="button" class="btn btn--primary btn--block" id="btnGenerate" style="margin-top:1rem">GERAR PÁGINA COM IA</button>
+          </div>
+
+          <div class="wizard__nav">
+            <button type="button" class="btn btn--ghost" id="btnPrev">Voltar</button>
+            <button type="button" class="btn btn--primary" id="btnNext">Continuar</button>
+          </div>
+        </form>
+
+        <aside class="rail" aria-label="Resumo">
+          <h3>Resumo</h3>
+          <dl id="railSummary"></dl>
+          <button type="button" class="btn btn--ghost btn--sm btn--block" id="btnReset" style="margin-top:1rem">Limpar tudo</button>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== GENERATING ===================== -->
+  <section class="view" id="view-generating">
+    <div class="container gen">
+      <div class="gen__spin" aria-hidden="true"></div>
+      <h2>Gerando sua página…</h2>
+      <p class="muted" id="genSubtitle">Isso costuma levar de 20 a 60 segundos.</p>
+      <ul class="gen__stages" id="genStages"></ul>
+    </div>
+  </section>
+
+  <!-- ===================== PREVIEW ===================== -->
+  <section class="view" id="view-preview">
+    <div class="container preview">
+      <div class="pv-toolbar">
+        <div class="pv-devices" role="group" aria-label="Dispositivo">
+          <button type="button" data-device="desktop" class="is-active">Desktop</button>
+          <button type="button" data-device="tablet">Tablet</button>
+          <button type="button" data-device="mobile">Mobile</button>
+        </div>
+        <div class="pv-actions">
+          <button type="button" class="btn btn--ghost btn--sm" id="btnEdit">Editar</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnRegen">Regerar</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnCopy">Copiar código</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnOpen">Abrir em aba</button>
+          <button type="button" class="btn btn--primary btn--sm" id="btnExport">Exportar</button>
+        </div>
+      </div>
+
+      <div class="pv-stage">
+        <div class="pv-frame-wrap" id="frameWrap" data-device="desktop">
+          <iframe id="pvFrame" title="Preview da página gerada" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+        </div>
+      </div>
+
+      <div class="editbar" id="editbar" hidden>
+        <h3>Ajuste rápido</h3>
+        <div class="editbar__row" style="margin-bottom:.7rem">
+          <button type="button" class="chip" data-instruction="Regenere apenas a seção HERO: headline mais forte e específica, mantendo a promessa.">Regenerar Hero</button>
+          <button type="button" class="chip" data-instruction="Regenere apenas a seção de FAQ com 5–7 objeções reais e respostas curtas.">Regenerar FAQ</button>
+          <button type="button" class="chip" data-instruction="Melhore todos os CTAs: verbo + resultado, microcopy de segurança abaixo do botão.">Melhorar CTA</button>
+          <button type="button" class="chip" data-instruction="Deixe a copy mais concisa e escaneável, cortando frases de enchimento.">Enxugar copy</button>
+        </div>
+        <div class="field" style="margin-bottom:.6rem"><label class="tiny">Instrução livre para a IA<input type="text" id="editInstruction" placeholder="ex.: troque a paleta para tons de azul-marinho e coral"></label></div>
+        <div class="editbar__row">
+          <button type="button" class="btn btn--primary btn--sm" id="btnApplyAi">Aplicar com IA</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnToggleCode">Editar código à mão</button>
+        </div>
+        <div id="codeWrap" hidden style="margin-top:.8rem">
+          <textarea id="codeArea" spellcheck="false"></textarea>
+          <div class="editbar__row" style="margin-top:.5rem">
+            <button type="button" class="btn btn--primary btn--sm" id="btnApplyCode">Aplicar edição</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="notices" id="notices"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="container foot__in">
+    <span>PageForge AI — o builder. As páginas geradas são arquivos independentes.</span>
+    <span>Motor: <span id="footModel">NVIDIA</span></span>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/assets/js/zipfile.js"></script>
+<script src="/assets/js/app.js"></script>
+</body>
+</html>

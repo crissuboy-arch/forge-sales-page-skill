@@ -1,30 +1,36 @@
 {
-  "name": "forge-sales-page-skill",
-  "version": "1.0.0",
+  "name": "pageforge-ai",
+  "version": "2.0.0",
   "private": true,
-  "description": "Skill reutilizável para agentes (Claude Code, Codex) gerarem páginas de vendas, presells e advertoriais profissionais em HTML/CSS/JS estático.",
+  "description": "PageForge AI — plataforma web de IA que transforma o briefing de um produto em sales pages, presells e páginas de conversão profissionais (HTML estático exportável). Motor: Forge Sales Page Skill + provider NVIDIA server-side.",
   "type": "module",
   "license": "MIT",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "verify": "node scripts/verify.js",
-    "validate-links": "node scripts/validate-links.js",
-    "scroll-qa": "node scripts/scroll-qa.js",
-    "build": "node scripts/build.js",
-    "package": "node scripts/package.js"
+    "build": "node scripts/build-knowledge.mjs",
+    "dev": "node scripts/build-knowledge.mjs && vercel dev",
+    "test": "node scripts/app-selftest.mjs",
+    "knowledge": "node scripts/build-knowledge.mjs",
+    "skill:verify": "node scripts/verify.js",
+    "skill:validate-links": "node scripts/validate-links.js",
+    "skill:scroll-qa": "node scripts/scroll-qa.js",
+    "skill:build": "node scripts/build.js",
+    "skill:package": "node scripts/package.js"
   },
   "dependencies": {},
   "devDependencies": {},
   "keywords": [
+    "pageforge",
     "sales-page",
     "landing-page",
-    "advertorial",
     "presell",
+    "advertorial",
+    "ai",
+    "nvidia",
     "copywriting",
-    "claude-code",
-    "agent-skill",
-    "static-site"
+    "static-site",
+    "vercel"
   ]
 }

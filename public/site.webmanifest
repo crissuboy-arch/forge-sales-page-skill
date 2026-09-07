@@ -1,0 +1,13 @@
+{
+  "name": "PageForge AI",
+  "short_name": "PageForge",
+  "description": "Transforme uma ideia em uma página pronta para vender.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "browser",
+  "theme_color": "#10B981",
+  "background_color": "#0B0F0E",
+  "icons": [
+    { "src": "/assets/img/favicon.svg", "type": "image/svg+xml", "sizes": "any" }
+  ]
+}
