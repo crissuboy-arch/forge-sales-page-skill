@@ -105,7 +105,7 @@ export default async function handler(req, res) {
     if (step === 'plan') {
       if (mock) return finish({ t: 'done', ok: true, plan: mockPlan(brief), meta: { model: 'mock', ms: Date.now() - started } });
       const { system, user } = buildPlanMessages(brief);
-      const r = await callAI({ system, user, temperature: 0.6, maxTokens: 2400, budgetMs: 50000 });
+      const r = await callAI({ system, user, temperature: 0.6, maxTokens: 4096, budgetMs: 50000 });
       const plan = parseJsonLoose(r.content);
       if (!plan || !Array.isArray(plan.sections) || !plan.sections.length) {
         return finish({ t: 'error', code: 'BAD_PLAN', error: 'A IA não devolveu um plano válido. Tente de novo.', raw: String(r.content || '').slice(0, 1200) });

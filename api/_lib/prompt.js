@@ -160,12 +160,12 @@ Estrutura exata:
   "jsonld": { "@context": "https://schema.org", "@graph": [ { "@type": "Organization", "@id": "https://exemplo.com/#org", "name": "...", "url": "https://exemplo.com/" }, { "@type": "WebSite", "url": "https://exemplo.com/", "name": "...", "inLanguage": "<lang>", "publisher": { "@id": "https://exemplo.com/#org" } } ] },
   "ctaText": "<texto do CTA primário: verbo + resultado, nunca 'comprar'>",
   "sections": [
-    { "id": "hero", "kind": "hero", "goal": "<objetivo desta seção>", "copy": "<TODA a copy real desta seção: headline, subhead, bullets, microcopy — texto final, no idioma, específico, voz do avatar>" }
-    /* 5 a 9 seções na ordem da arquitetura escolhida para ESTE caso; a última kind:"footer" com links legais e identificação do publisher; kind possíveis: hero, problem, mechanism, product, benefits, proof, offer, bonus, guarantee, faq, cta, about, disclosure, footer */
+    { "id": "hero", "kind": "hero", "goal": "<objetivo desta seção, curto>", "copy": "<a copy real desta seção — headline + subhead + pontos-chave, no idioma, voz do avatar. CONCISO: o passo seguinte transforma isto em HTML. Uma linha por ideia, separadas por \\n.>" }
+    /* 5 a 7 seções na ordem da arquitetura para ESTE caso; a última kind:"footer" (links legais + publisher). kind possíveis: hero, problem, mechanism, product, benefits, proof, offer, guarantee, faq, disclosure, footer */
   ]
 }
 
-Regras: JSON válido (aspas duplas, sem comentários no JSON real, sem trailing commas). Você NÃO escreve CSS — só escolhe os \`styleTokens\` (um stylesheet paramétrico é montado a partir deles). Paleta com contraste AA. \`jsonld\` NUNCA com Review/AggregateRating/rating. Se nicho sensível: incluir disclaimers na copy das seções relevantes e uma seção kind:"disclosure". Copy no máximo o necessário — é um plano enxuto, o HTML vem depois.
+Regras: JSON válido (aspas duplas, sem comentários no JSON real, sem trailing commas), COMPACTO. Você NÃO escreve CSS — só escolhe os \`styleTokens\`. Paleta com contraste AA. \`jsonld\` NUNCA com Review/AggregateRating/rating. Nicho sensível: disclaimers na copy + uma seção kind:"disclosure". A \`copy\` de cada seção é um esqueleto conciso (bullets/frases curtas), não texto corrido longo — o HTML final vem na etapa seguinte.
 `;
 
 const RENDER_CONTRACT = `

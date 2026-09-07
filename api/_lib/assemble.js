@@ -29,9 +29,26 @@ export function parseJsonLoose(raw) {
     else if (ch === '{') depth++;
     else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
   }
-  const chunk = end === -1 ? s.slice(start) : s.slice(start, end + 1);
+  let chunk = end === -1 ? s.slice(start) : s.slice(start, end + 1);
   try { return JSON.parse(chunk); } catch { /* tenta consertos */ }
-  try { return JSON.parse(chunk.replace(/,\s*([}\]])/g, '$1').replace(CTRL, ' ')); } catch { return null; }
+  try { return JSON.parse(chunk.replace(/,\s*([}\]])/g, '$1').replace(CTRL, ' ')); } catch { /* tenta reparar truncado */ }
+  // JSON truncado (modelo cortou no meio): fecha strings/arrays/objetos abertos
+  try {
+    let t = chunk.replace(CTRL, ' ');
+    let inStr = false; let escN = false; const stack = [];
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if (inStr) { if (escN) escN = false; else if (c === '\\') escN = true; else if (c === '"') inStr = false; continue; }
+      if (c === '"') inStr = true;
+      else if (c === '{' || c === '[') stack.push(c);
+      else if (c === '}' || c === ']') stack.pop();
+    }
+    if (inStr) t += '"';
+    t = t.replace(/,\s*$/, '').replace(/:\s*$/, ': null');
+    while (stack.length) t += (stack.pop() === '{' ? '}' : ']');
+    t = t.replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(t);
+  } catch { return null; }
 }
 
 const BASE_JS = `<script>
