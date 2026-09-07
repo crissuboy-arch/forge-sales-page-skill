@@ -9,7 +9,7 @@
 const DEFAULTS = {
   nvidia: {
     baseUrl: 'https://integrate.api.nvidia.com/v1',
-    model: 'nvidia/nemotron-3-super-120b-a12b',
+    model: 'moonshotai/kimi-k3',
   },
 };
 
@@ -18,9 +18,9 @@ const DEFAULTS = {
 // geração de pé sem exigir novo deploy. Configure NVIDIA_MODEL para fixar um.
 // Verifique o catálogo vigente em GET /api/models.
 const NVIDIA_FALLBACKS = [
-  'nvidia/nemotron-3-ultra-550b-a55b',
-  'nvidia/nemotron-3.5-lightning-30b-a3b',
   'deepseek-ai/deepseek-v4-flash-0731',
+  'nvidia/nemotron-3-super-120b-a12b',
+  'deepseek-ai/deepseek-v4-pro-0813',
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
