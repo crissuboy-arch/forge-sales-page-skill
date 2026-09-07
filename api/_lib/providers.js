@@ -9,7 +9,7 @@
 const DEFAULTS = {
   nvidia: {
     baseUrl: 'https://integrate.api.nvidia.com/v1',
-    model: 'deepseek-ai/deepseek-v4-flash-0731',
+    model: 'nvidia/nemotron-3-super-120b-a12b',
   },
 };
 
@@ -19,12 +19,21 @@ const DEFAULTS = {
 // Verifique o catálogo vigente em GET /api/models.
 const NVIDIA_FALLBACKS = [
   'nvidia/nemotron-3.5-lightning-30b-a3b',
+  'nvidia/nemotron-4-340b-instruct',
+  'deepseek-ai/deepseek-v4-pro-0813',
+  'moonshotai/kimi-k2.6',
   'google/gemma-4-31b-it',
-  'moonshotai/kimi-k3',
-  'nvidia/llama-3.1-nemotron-70b-instruct',
-  'mistralai/mistral-large-2-instruct',
-  'meta/llama-3.1-70b-instruct',
 ];
+
+/** Remove blocos de raciocínio que alguns modelos emitem antes da resposta. */
+function stripReasoning(s) {
+  let t = String(s || '');
+  t = t.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  t = t.replace(/<\|thinking\|>[\s\S]*?<\|\/thinking\|>/gi, '');
+  // <think> aberto e nunca fechado (budget estourou no meio do raciocínio)
+  if (/<think>/i.test(t) && !/<\/think>/i.test(t)) t = t.replace(/<think>[\s\S]*$/i, '');
+  return t.trim();
+}
 
 class MissingKeyError extends Error {
   constructor(provider) {
@@ -77,22 +86,30 @@ class NvidiaProvider extends AIProvider {
   }
 
   async _callModel(model, { system, user, temperature, maxTokens, signal, stream, onToken }) {
+    // Desliga o "raciocínio" (reasoning/think) que estoura tempo e tokens.
+    // Nemotron: via system prompt. Outros: via chat_template_kwargs (ignorado se não suportado).
+    let sys = system;
+    const body = {
+      model,
+      messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
+      temperature,
+      top_p: 0.95,
+      max_tokens: maxTokens,
+      stream: Boolean(stream),
+    };
+    if (/nemotron/i.test(model)) {
+      body.messages[0].content = `detailed thinking off\n\n${sys}`;
+    } else {
+      body.chat_template_kwargs = { thinking: false };
+      body.extra_body = { chat_template_kwargs: { thinking: false } };
+    }
+
     let res;
     try {
       res = await fetch(`${this.cfg.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${this.cfg.apiKey}` },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-          temperature,
-          top_p: 0.95,
-          max_tokens: maxTokens,
-          stream: Boolean(stream),
-        }),
+        body: JSON.stringify(body),
         signal,
       });
     } catch (err) {
@@ -142,14 +159,16 @@ class NvidiaProvider extends AIProvider {
           } catch { /* linha parcial — ignora */ }
         }
       }
-      if (!content.trim()) throw new ProviderError(`A NVIDIA retornou stream vazio para "${model}".`, 502);
-      return { content, model: realModel, finishReason, usage };
+      const clean = stripReasoning(content);
+      if (!clean.trim()) throw new ProviderError(`A NVIDIA retornou stream vazio (ou só raciocínio) para "${model}".`, 502);
+      return { content: clean, model: realModel, finishReason, usage };
     }
 
     const data = await res.json();
     const choice = data?.choices?.[0];
-    const content = choice?.message?.content || '';
-    if (!content.trim()) throw new ProviderError(`A NVIDIA retornou resposta vazia para "${model}".`, 502);
+    const raw = choice?.message?.content || '';
+    const content = stripReasoning(raw);
+    if (!content.trim()) throw new ProviderError(`A NVIDIA retornou resposta vazia (ou só raciocínio) para "${model}".`, 502);
     return {
       content,
       model: data?.model || model,
