@@ -96,11 +96,11 @@ class NvidiaProvider extends AIProvider {
       stream: Boolean(stream),
     };
     if (/nemotron/i.test(model)) {
-      // Nemotron: toggle de raciocínio via system prompt.
       body.messages[0].content = `detailed thinking off\n\n${sys}`;
-    } else if (/deepseek|kimi|qwen3|glm/i.test(model)) {
-      // Alguns modelos aceitam este toggle; se não aceitarem, stripReasoning() limpa o resto.
-      body.chat_template_kwargs = { thinking: false };
+      body.chat_template_kwargs = { thinking: false, enable_thinking: false };
+    } else if (/deepseek|kimi|qwen|glm|minimax|magistral/i.test(model)) {
+      body.chat_template_kwargs = { thinking: false, enable_thinking: false };
+      body.reasoning_effort = 'none';
     }
 
     let res;

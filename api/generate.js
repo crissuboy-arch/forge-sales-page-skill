@@ -73,8 +73,8 @@ export default async function handler(req, res) {
       for (const m of models) {
         const s = Date.now();
         try {
-          const rr = await provider._callModel(m, { system: 'Responda em uma frase.', user: 'Diga apenas: ok. Nada mais.', temperature: 0.1, maxTokens: 40, stream: false });
-          out.push({ model: m, ms: Date.now() - s, ok: true, sample: String(rr.content || '').slice(0, 40) });
+          const rr = await provider._callModel(m, { system: 'Você gera JSON.', user: 'Devolva só este JSON: {"a":1,"b":"dois","c":[1,2,3]}', temperature: 0.1, maxTokens: Number(payload.maxTokens) || 120, stream: false });
+          out.push({ model: m, ms: Date.now() - s, ok: true, sample: String(rr.content || '').slice(0, 200) });
         } catch (e) { out.push({ model: m, ms: Date.now() - s, ok: false, error: String(e.message || e).slice(0, 160) }); }
       }
       return finish({ t: 'done', ok: true, results: out, meta: { ms: Date.now() - started } });
