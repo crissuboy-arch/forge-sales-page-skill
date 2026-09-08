@@ -263,6 +263,34 @@
     return { st: st, idx: idx, label: STATUS_LABEL[st], pct: Math.round((idx / (STATUS.length - 2)) * 100) };
   }
 
+  var prefersReducedMotion = function () {
+    try { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+  };
+  function scrollToSection(secId) {
+    var t = document.getElementById(secId);
+    if (t) t.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  function leadHeaderHtml(l) {
+    var sg = stageInfo(l);
+    return '<div class="lead-hd"><div class="lead-hd__main">' +
+      '<h1>' + esc(l.nome) + '</h1>' +
+      '<p class="panel__lead">' + esc(l.nicho || 'nicho não informado') + (l.cidade ? ' · ' + esc(l.cidade) : '') + '</p>' +
+      '<div class="lead-hd__badges"><span class="stage-badge stage-badge--' + esc(sg.st) + '">Estágio: ' + esc(sg.label) + '</span>' + tempBadge(l.temperatura) +
+        (l.score != null ? '<span class="chip">Score ' + esc(l.score) + '</span>' : '') +
+        (l.demoUrl ? '<a class="chip chip--on" href="' + esc(l.demoUrl) + '" target="_blank" rel="noopener">Demo publicada ↗</a>' : '') +
+      '</div>' +
+      '<div class="stage-track"><span style="width:' + Math.max(4, sg.pct) + '%"></span></div>' +
+      '</div></div>';
+  }
+  // atualiza só o cabeçalho do lead (estágio/badges) sem redesenhar o painel comercial
+  function refreshLeadHeader(slug) {
+    var host = document.querySelector('#leadDetail .lead-hd');
+    if (!host) return;
+    var l = PFStore.leads.get(slug); if (!l) return;
+    host.outerHTML = leadHeaderHtml(l);
+  }
+
   function renderLeadDetail(slug) {
     var l = PFStore.leads.get(slug);
     var el = $('#leadDetail');
@@ -273,7 +301,6 @@
       return;
     }
     var proj = latestProjectForLead(slug);
-    var sg = stageInfo(l);
     var contatos = [];
     if (l.whatsapp) contatos.push('WhatsApp: <a href="https://wa.me/' + digits(l.whatsapp) + '" target="_blank" rel="noopener">' + esc(l.whatsapp) + '</a>');
     if (l.telefone && l.telefone !== l.whatsapp) contatos.push('Telefone: ' + esc(l.telefone));
@@ -288,24 +315,14 @@
     ];
 
     el.innerHTML =
-      '<div class="lead-hd">' +
-        '<div class="lead-hd__main">' +
-          '<h1>' + esc(l.nome) + '</h1>' +
-          '<p class="panel__lead">' + esc(l.nicho || 'nicho não informado') + (l.cidade ? ' · ' + esc(l.cidade) : '') + '</p>' +
-          '<div class="lead-hd__badges"><span class="stage-badge stage-badge--' + esc(sg.st) + '">Estágio: ' + esc(sg.label) + '</span>' + tempBadge(l.temperatura) +
-            (l.score != null ? '<span class="chip">Score ' + esc(l.score) + '</span>' : '') +
-            (l.demoUrl ? '<a class="chip chip--on" href="' + esc(l.demoUrl) + '" target="_blank" rel="noopener">Demo publicada ↗</a>' : '') +
-          '</div>' +
-          '<div class="stage-track"><span style="width:' + Math.max(4, sg.pct) + '%"></span></div>' +
-        '</div>' +
-      '</div>' +
+      leadHeaderHtml(l) +
 
       '<div class="lead-quick">' +
         '<button class="btn btn--primary btn--sm" id="qaBuild">CRIAR NOVA VERSÃO</button>' +
         (proj ? '<button class="btn btn--ghost btn--sm" id="qaEdit">EDITAR PÁGINA</button>' +
                 '<button class="btn btn--ghost btn--sm" id="qaQA">QA</button>' +
                 '<button class="btn btn--ghost btn--sm" id="qaCompare">ANTES × DEPOIS</button>' : '') +
-        '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaDemo">PUBLICAR DEMO</button>' +
+        '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaDemo"' + (proj ? '' : ' disabled title="Gere uma página deste lead primeiro"') + '>PUBLICAR DEMO</button>' +
         '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaProp">GERAR PROPOSTA</button>' +
         '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaEmail">CRIAR E-MAIL</button>' +
         '<button class="btn btn--ghost btn--sm" data-jump="comercial" id="qaFollow">AGENDAR FOLLOW-UP</button>' +
@@ -371,19 +388,12 @@
           : '<p class="muted tiny">Sem eventos ainda.</p>') +
       '</section>';
 
-    // section nav scroll-spy
+    // navegação de seções + botões de ação que saltam para a seção
     $$('#leadSecnav a').forEach(function (a) {
-      a.addEventListener('click', function (e) {
-        e.preventDefault();
-        var t = document.getElementById('sec-' + a.dataset.sec);
-        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      a.addEventListener('click', function (e) { e.preventDefault(); scrollToSection('sec-' + a.dataset.sec); });
     });
     $$('[data-jump]', el).forEach(function (b) {
-      b.addEventListener('click', function () {
-        var t = document.getElementById('sec-' + b.dataset.jump);
-        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      b.addEventListener('click', function () { scrollToSection('sec-' + b.dataset.jump); });
     });
 
     $('#ldRemove').addEventListener('click', function () {
@@ -403,26 +413,19 @@
     }
 
     // dispara ações comerciais após o painel montar
-    function fireAfterCommercial(id) {
+    function fireAfterCommercial(id, act) {
       var tries = 0;
       (function poll() {
         var b = document.getElementById(id);
-        if (b) { document.getElementById('sec-comercial').scrollIntoView({ behavior: 'smooth' }); b.click(); return; }
+        if (b) { scrollToSection('sec-comercial'); if (act === 'focus') b.focus(); else if (!b.disabled) b.click(); return; }
         if (tries++ < 20) setTimeout(poll, 80);
       })();
     }
-    $('#qaDemo').addEventListener('click', function () { fireAfterCommercial('cmPublish'); });
+    var qd = $('#qaDemo'); if (qd && !qd.disabled) qd.addEventListener('click', function () { fireAfterCommercial('cmPublish'); });
     $('#qaProp').addEventListener('click', function () { fireAfterCommercial('cmProposal'); });
     $('#qaEmail').addEventListener('click', function () { fireAfterCommercial('cmEmail'); });
     $('#qaContract').addEventListener('click', function () { fireAfterCommercial('cmContract'); });
-    $('#qaFollow').addEventListener('click', function () {
-      var tries = 0;
-      (function poll() {
-        var b = document.getElementById('cmNextDate');
-        if (b) { document.getElementById('sec-comercial').scrollIntoView({ behavior: 'smooth' }); b.focus(); return; }
-        if (tries++ < 20) setTimeout(poll, 80);
-      })();
-    });
+    $('#qaFollow').addEventListener('click', function () { fireAfterCommercial('cmNextDate', 'focus'); });
 
     if (window.PFCommercial) PFCommercial.renderPanel(slug, $('#ldCommercial'));
   }
@@ -569,7 +572,9 @@
         '<p class="panel__lead">Status vindo do servidor. As chaves de API ficam <strong>apenas</strong> nas Environment Variables da Vercel — a PageForge nunca pede nem guarda chave secreta no navegador.</p>' +
         (integrations.length
           ? '<div class="intg-grid">' + integrations.map(integrationCard).join('') + '</div>'
-          : notice('info', 'Não consegui consultar o status das integrações (servidor offline?). Tente recarregar.')) +
+          : (!health
+              ? '<div class="prospect-loading" style="padding:1.5rem 0"><div class="gen__spin"></div><p class="muted tiny">Consultando o servidor…</p></div>'
+              : notice('warn', 'Não foi possível consultar o status das integrações (servidor indisponível). Recarregue a página.'))) +
       '</section>' +
 
       '<section class="panel"><h2>Dados locais</h2>' +
@@ -815,6 +820,7 @@
     renderDashboard: renderDashboard,
     renderFollowups: renderFollowups,
     renderLeadDetail: renderLeadDetail,
+    refreshLeadHeader: refreshLeadHeader,
     setLeadStatus: setLeadStatus,
     statusLabel: statusLabel,
     normStatus: normStatus,

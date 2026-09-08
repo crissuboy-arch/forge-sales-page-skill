@@ -71,7 +71,6 @@
     window.scrollTo(0, 0);
     renderCrumbs(base, param);
     try { PFStore.ui.set({ lastRoute: hash }); } catch (e) {}
-    if (id === 'view-home' && window.PFProspect) PFProspect.renderDashboard(health);
     if (id === 'view-new') renderWizard();
     if (id === 'view-preview') renderPreview();
     if (id === 'view-compare') renderCompare();
@@ -92,7 +91,13 @@
       var l = param && window.PFStore && PFStore.leads.get(param);
       parts.push('<span>' + escapeHtml(l ? l.nome : 'Lead') + '</span>');
     } else if (base === '/compare' || base === '/preview') {
-      parts.push('<a href="#/projetos">Projetos</a>');
+      var ls = state.leadSource;
+      if (ls && ls.slug) {
+        parts.push('<a href="#/leads">Leads</a>');
+        parts.push('<a href="#/lead/' + escapeHtml(ls.slug) + '">' + escapeHtml(ls.nome || 'Lead') + '</a>');
+      } else if (state.currentProjectId && window.PFStore && PFStore.projects.get(state.currentProjectId)) {
+        parts.push('<a href="#/projetos">Projetos</a>');
+      }
       parts.push('<span>' + escapeHtml(CRUMB_LABEL[base]) + '</span>');
     } else {
       parts.push('<span>' + escapeHtml(CRUMB_LABEL[base] || base.replace('/', '')) + '</span>');
@@ -734,12 +739,22 @@
         '<button class="btn btn--primary btn--sm" data-cd="yes">' + escapeHtml(opts.yes || 'Confirmar') + '</button>' +
       '</div></div>';
     document.body.appendChild(back);
-    var close = function () { back.remove(); document.removeEventListener('keydown', onKey); };
-    var onKey = function (e) { if (e.key === 'Escape') close(); };
+    var prevFocus = document.activeElement;
+    var close = function () { back.remove(); document.removeEventListener('keydown', onKey); try { prevFocus && prevFocus.focus(); } catch (e) {} };
+    var btns = $$('button', back);
+    var onKey = function (e) {
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'Tab') { // trap dentro do modal
+        var first = btns[0], last = btns[btns.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
     document.addEventListener('keydown', onKey);
     back.querySelector('.modal__backdrop').addEventListener('click', close);
     back.querySelector('[data-cd="no"]').addEventListener('click', close);
     back.querySelector('[data-cd="yes"]').addEventListener('click', function () { close(); try { onYes && onYes(); } catch (e) {} });
+    back.querySelector('[data-cd="yes"]').focus();
   }
 
   /* ------------------------------------------------- onboarding */
@@ -751,6 +766,7 @@
     if (!force && (st.onboardingHideForever || st.onboardingDone || hasWork)) return;
     ob.hidden = false;
     var hide = $('#obHide'); if (hide) hide.checked = !!st.onboardingHideForever;
+    var first = ob.querySelector('[data-ob-go]'); if (first) setTimeout(function () { first.focus(); }, 30);
   }
   function closeOnboarding() {
     var ob = $('#onboarding'); if (!ob) return;
@@ -764,7 +780,17 @@
     $$('[data-ob-go]', ob).forEach(function (b) {
       b.addEventListener('click', function () { closeOnboarding(); location.hash = b.dataset.obGo; });
     });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !ob.hidden) closeOnboarding(); });
+    document.addEventListener('keydown', function (e) {
+      if (ob.hidden) return;
+      if (e.key === 'Escape') { closeOnboarding(); return; }
+      if (e.key === 'Tab') {
+        var f = $$('button, a, input', ob.querySelector('.modal__box'));
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
   })();
 
   function doExportProject(p) {

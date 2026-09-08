@@ -257,10 +257,46 @@ cards, formulários, responsividade. Sem overflow horizontal em nenhuma view
   **36/36, 0 erros de console.**
 - Fase 3 e2e — sem regressão (21/21).
 
-### Pendente (fases seguintes — NÃO fazer agora)
+## Auditoria final única (feito)
 
-- [ ] provider de IA definitivo (NVIDIA + Gemini/OpenAI/Groq — `api/_lib/providers.js` pronto)
-- [ ] envio automático de e-mail (Gmail API) — hoje é rascunho manual
+Uma passagem completa pelo produto (onboarding → dashboard → Criar Página →
+Prospecção → Leads → detalhe do lead → diagnóstico → Criar Nova Versão →
+builder → preview → editor visual → salvar/reabrir → QA → Antes × Depois →
+Projetos → Demo → proposta → e-mail → follow-up → contrato → pipeline →
+configurações → export/import HTML/ZIP), desktop + tablet + mobile 390px.
+
+**Correções aplicadas nesta rodada:**
+- Contraste: `--text-faint` escurecido (`#8b938e` → `#6b736e`, ~4.7:1 sobre o
+  fundo) para meta-textos passarem no AA.
+- Acessibilidade de modais: onboarding e diálogo de confirmação agora movem o
+  foco para dentro, prendem o Tab e devolvem o foco ao fechar (Escape já
+  fechava).
+- `prefers-reduced-motion`: a navegação de seções do lead usa rolagem
+  instantânea quando o usuário pede menos movimento.
+- Estado inconsistente: o cabeçalho do lead (badge de estágio / trilha /
+  "Demo publicada") passa a atualizar na hora após publicar demo, salvar
+  proposta, marcar e-mail enviado ou mudar o pipeline — sem recarregar
+  (`PFProspect.refreshLeadHeader`).
+- Beco sem saída: "PUBLICAR DEMO" na barra de ações do lead fica **desabilitado
+  com dica** enquanto não existe página gerada, em vez de não fazer nada.
+- Breadcrumbs de preview/Antes×Depois agora refletem a origem real
+  (lead ou projeto), não um "Projetos" fixo.
+- Config: enquanto o servidor responde, os cards de integração mostram
+  "Consultando o servidor…" em vez de uma mensagem de erro precoce.
+- Removida uma chamada redundante de render do dashboard por navegação.
+
+**Sem pendências estruturais.** Tudo o que resta depende exclusivamente de
+credencial/serviço externo (ver abaixo).
+
+**Retestes:** `app-selftest` 38/38 · auditoria e2e 53/53 (desktop+tablet+mobile,
+0 overflow, 0 erro de console) · Fase 3 e2e 21/21 · Task 4 e2e 36/36.
+
+### Pendências que dependem exclusivamente de API/credencial (NÃO são bug)
+
+- [ ] provider de IA definitivo — geração real de páginas (NVIDIA já tem chave; Gemini/OpenAI/Groq com `api/_lib/providers.js` pronto)
+- [ ] `AISA_KEY` — prospecção real (hoje MOCK claramente sinalizado)
+- [ ] `BLOB_READ_WRITE_TOKEN` — demo com URL pública persistente (hoje memória em dev / Exportar HTML/ZIP como alternativa)
+- [ ] `GMAIL_CLIENT_ID` — envio automático de e-mail (hoje rascunho manual via Gmail Compose / mailto)
 - [ ] assinatura eletrônica do contrato
 - [ ] domínio próprio para a demo (hoje `<host>/demo/<slug>`)
 - [ ] armazenamento em nuvem dos leads/projetos (o adapter `PFStore` já isola isso)

@@ -42,6 +42,7 @@
   function renderPanel(slug, host) {
     var l = PFStore.leads.get(slug);
     if (!l || !host) return;
+    if (window.PFProspect && PFProspect.refreshLeadHeader) PFProspect.refreshLeadHeader(slug);
     var S = PFProspect.STATUS, SL = PFProspect.STATUS_LABEL;
     var proj = latestProjectFor(slug);
     var hist = (l.historico || []).slice().reverse();
