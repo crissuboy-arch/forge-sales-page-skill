@@ -291,6 +291,59 @@ credencial/serviço externo (ver abaixo).
 **Retestes:** `app-selftest` 38/38 · auditoria e2e 53/53 (desktop+tablet+mobile,
 0 overflow, 0 erro de console) · Fase 3 e2e 21/21 · Task 4 e2e 36/36.
 
+## Camada de design (Impeccable) — feito
+
+O Impeccable (github.com/pbakaus/impeccable, skill oficial v4.2.2) está instalado
+via `npx skills add` em `.agents/skills/impeccable/` (git-ignorado; `skills-lock.json`
+versionado). Todas as ~23 capacidades (`shape · init · document · extract ·
+critique · audit · polish · bolder · quieter · distill · harden · onboard ·
+animate · colorize · typeset · layout · delight · overdrive · clarify · adapt ·
+optimize · live`) estão disponíveis para o agente de desenvolvimento.
+
+### Contexto de design permanente (versionado)
+- **`PRODUCT.md`** — verdade do produto (schema oficial `impeccable:product-schema 1`).
+- **`DESIGN.md`** — sistema visual do **app** (modo Operate, esmeralda/branco/grafite,
+  frontmatter de tokens no formato DESIGN.md). Deixa explícito que **as páginas
+  geradas NÃO herdam a identidade do app**.
+- **`.impeccable/config.json`** — `buildPath: code` (sem geração de imagem neste
+  ambiente). Artefatos de sessão (`build/`, `review/`, `mocks/`, `live/`)
+  git-ignorados.
+
+### A camada aplicada às PÁGINAS que a PageForge gera
+O Impeccable não serve só para auditar o dashboard — ele fortalece principalmente
+o que a PageForge cria/redesenha:
+
+- **Prompts** (`api/_lib/prompt.js` → `IMPECCABLE_CRAFT`): o essencial de
+  craft-floor / layout / typeset / colorize / animate entra nos prompts de
+  **PLAN**, **RENDER** e ajuste — como regras, não como 23 botões. Primeira dobra
+  é tese; hierarquia pelo squint test; ritmo de espaço; degraus de tipografia;
+  accent com papel; prova > afirmação; lista de banidos absolutos.
+- **DESIGN QUALITY** (`api/_lib/design-quality.js`, determinístico, sem IA) —
+  novo passo do pipeline entre RENDER e ASSEMBLE:
+  `BRIEFING → PLAN → RENDER → **DESIGN QUALITY** → ASSEMBLE → PREVIEW → EDITOR → QA → EXPORT`
+  1. **Perfil de design** do caso: modo do visitante (persuade/read/operate) +
+     seleção só das capacidades que importam para aquela página (layout, typeset,
+     audit, harden, polish sempre; colorize/adapt/animate/bolder/quieter/clarify/
+     critique/distill conforme o que for detectado).
+  2. **Auditoria anti-genérico** (craft-floor): AI-purple, card como estrutura /
+     card dentro de card, grade de mosaico, números 01/02/03 decorativos, eyebrow
+     acima de heading, glow/halo, hard shadow, border-left colorido > 1px, raio
+     exagerado / pílula em bloco grande, emoji no lugar de ícone, monospace como
+     traje, Impact/Arial Black como voz, ritmo de espaço repetido, hierarquia de
+     h1 fraca, métricas sem fonte.
+  3. **Correções seguras** (só banimento absoluto): achata o gradiente
+     "AI-purple" para cor sólida; o resto vira score `/10` + achados P0–P3.
+- O `impeccable-qa.js` (5 dimensões técnicas, score `/20`) segue **depois** do
+  DESIGN QUALITY.
+- **Preview**: o relatório de QA mostra os dois blocos —
+  `Impeccable QA: X/20` e `Design (Impeccable): X/10 · modo · capacidades`.
+  Persistido no projeto; reaparece ao reabrir; recalculável pelo botão QA.
+
+### Retestes
+`app-selftest` **42/42** (4 novos: perfil/modo, anti-genérico + achatar
+gradiente, mock limpo passa, craft-floor nos prompts). Auditoria e2e **53/53**,
+Fase 3 **21/21**, Task 4 **36/36** — sem regressão, 0 erro de console.
+
 ### Pendências que dependem exclusivamente de API/credencial (NÃO são bug)
 
 - [ ] provider de IA definitivo — geração real de páginas (NVIDIA já tem chave; Gemini/OpenAI/Groq com `api/_lib/providers.js` pronto)

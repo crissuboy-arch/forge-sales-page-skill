@@ -1,0 +1,4 @@
+{
+  "buildPath": "code",
+  "notes": "Image generation is not available in this environment; new visual work is code-led. PRODUCT.md and DESIGN.md at the repo root are the standing context for `impeccable context`. DESIGN.md describes the builder app (Operate); generated pages are governed by api/_lib/theme.js + api/_lib/design-quality.js (Persuade)."
+}

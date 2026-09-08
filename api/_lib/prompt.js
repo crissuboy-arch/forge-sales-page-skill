@@ -97,6 +97,7 @@ export function buildMessages(brief) {
 =================== MÉTODO FORGE + REFERÊNCIAS (use como sistema especialista) ===================
 ${corpus}
 ================================================================================================
+${IMPECCABLE_CRAFT}
 ${OUTPUT_CONTRACT}`;
 
   const checkout = brief.checkoutUrl || '#oferta';
@@ -183,9 +184,26 @@ Devolva **um único bloco JSON** \`{ "<id>": "<html da seção>", ... }\` e NADA
 - Sem emoji-ícone, sem "scroll ↓", sem em-dash em texto visível, sem promessa absoluta/garantia de resultado.
 `;
 
+// CAMADA DE DESIGN — destila craft-floor / layout / typeset / colorize / animate
+// do Impeccable (github.com/pbakaus/impeccable). Regras, não botões: a página
+// nasce com esse nível e a etapa DESIGN QUALITY (design-quality.js) confere.
+const IMPECCABLE_CRAFT = `CAMADA DE DESIGN (Impeccable craft-floor — obrigatória, o briefing pinado vence, seu hábito não):
+- PRIMEIRA DOBRA É UMA TESE, não um cabeçalho: mostre o mecanismo / para quem é / a prova em segundos. Nada de hero-template genérico.
+- HIERARQUIA pelo squint test: com a tela desfocada dá pra ver, EM ORDEM, o elemento primário, o secundário e os grupos.
+- RITMO DE ESPAÇO: apertado dentro do grupo, generoso entre grupos, MAIS espaço acima de um heading do que abaixo. Um único ritmo na página; um trecho denso ganha um trecho quieto. Nada de um valor de padding repetido em tudo.
+- TIPOGRAFIA: medida de leitura 60–75 caracteres; degraus ÓBVIOS de tamanho e peso entre h1 / h2 / corpo / rótulo; tracking no piso -0.04em (melhor -0.02 a -0.03); títulos equilibrados (sem viúva).
+- COR: o accent tem UM papel (ação/foco/estado), não é decoração espalhada. Texto secundário puxado do tom do fundo/tinta, nunca cinza chapado sobre cor. Deixe a cor forte dominar uma região deliberada em vez de pingar acentos.
+- ELEVAÇÃO declarada UMA vez: borda OU sombra. Sombra = offset + blur; halo "0 0" é decoração.
+- MOVIMENTO: no máximo UM momento autoral; NUNCA a mesma entrada em toda seção; ease-out exponencial a partir do estado já visível; sempre com caminho prefers-reduced-motion.
+- PROVE, NÃO AFIRME: mostre o produto fazendo o trabalho; específicos que um concorrente não copia. Número ilustrativo é rotulado como tal.
+- ESTADOS reais onde couber: hover, foco, vazio, erro.
+BANIDOS (nenhum briefing recupera): gradient text; eyebrow/kicker acima de heading; card como estrutura da página (e card dentro de card é SEMPRE erro); grade de cards idênticos como esqueleto; números de seção 01/02/03 decorativos; glow/neon; glass decorativo; border-left colorido > 1px em card/alerta; hard shadow "Npx Npx 0" fora de neobrutalismo real; emoji/glyph no lugar de ícone (ícone é SVG desenhado); monospace como "traje técnico"; Impact/Arial Black como voz de título; "AI-purple" (violeta→índigo→azul com brilho); creme+serif como default de qualquer nicho; raio de pílula (999px) em bloco grande (card fica em 12–16px).`;
+
 const SYSTEM_SHORT = `${SYSTEM_IDENTITY}
 
-Você está gerando UMA ETAPA de uma página (não a página inteira). Siga o contrato de saída da etapa à risca. Guardrails de compliance continuam valendo: sem depoimento/número/autoridade inventada, sem promessa absoluta, disclaimers em nicho sensível, urgência só se real, identidade visual própria (sem gradient text / glow / glass decorativo / AI-purple / grid de cards como estrutura).`;
+Você está gerando UMA ETAPA de uma página (não a página inteira). Siga o contrato de saída da etapa à risca. Guardrails de compliance continuam valendo: sem depoimento/número/autoridade inventada, sem promessa absoluta, disclaimers em nicho sensível, urgência só se real.
+
+${IMPECCABLE_CRAFT}`;
 
 // Playbook enxuto para a etapa PLAN (o corpus completo da skill estoura o tempo
 // da função). Destila o essencial de sales-architecture / copywriting /
@@ -205,7 +223,9 @@ Sofisticação de mercado: 1–2 afirmar benefício; 3 liderar pelo mecanismo; 4
 
 COMPLIANCE (blocker): nunca inventar depoimento/número/estudo/autoridade/selo. Nunca promessa absoluta ou garantia de resultado ("garantido","cura","100%","renda garantida","sem esforço"). Nicho sensível (saúde/finanças/emagrecimento/relacionamento): disclaimers ("resultados podem variar","não substitui acompanhamento profissional / não é aconselhamento") + dor na 3ª pessoa/como fenômeno, nunca "você está [atributo]?". Urgência só se real. JSON-LD sem Review/AggregateRating.
 
-DIREÇÃO DE ARTE: identidade própria do produto (mood + paleta AA + par tipográfico). Evitar: gradient text, glow/neon, glass decorativo, "AI-purple", creme+latão genérico, #000/#fff puros, eyebrow em toda seção, "scroll ↓", em-dash em texto visível, grid de cards como estrutura.`;
+DIREÇÃO DE ARTE: identidade própria do produto (mood + paleta AA + par tipográfico). Evitar: gradient text, glow/neon, glass decorativo, "AI-purple", creme+latão genérico, #000/#fff puros, eyebrow em toda seção, "scroll ↓", em-dash em texto visível, grid de cards como estrutura.
+
+${IMPECCABLE_CRAFT}`;
 
 /** Etapa 1 — plano (análise + arquitetura + direção + copy + tokens + head). */
 export function buildPlanMessages(brief) {

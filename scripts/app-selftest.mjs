@@ -15,6 +15,7 @@ import { getProvider, listProviders } from '../api/_lib/providers.js';
 import { scoreLead, normalizeLead, leadToBriefing, slugify, LEAD_STATUS } from '../api/_lib/prospect.js';
 import { mockProspect, aisaConfigured } from '../api/_lib/aisa.js';
 import { impeccableQa } from '../api/_lib/impeccable-qa.js';
+import { designQuality, designProfile, visitorMode } from '../api/_lib/design-quality.js';
 import { buildProposal, buildEmailDraft, buildContract, gmailComposeUrl } from '../api/_lib/commercial.js';
 import { normStatus, pushHistory } from '../api/_lib/prospect.js';
 
@@ -268,6 +269,45 @@ t('impeccable: página bem-formada do assemble tem score alto', () => {
   const pp = postprocess(assemblePage(value, plan, secs), value);
   const r = impeccableQa(pp.html, value);
   assert.ok(r.score >= 15, `score baixo: ${r.score} — ${r.findings.map((f) => f.msg).join('; ')}`);
+});
+
+// ---------- DESIGN QUALITY (camada de design do Impeccable p/ as páginas geradas) ----------
+t('design-quality: visitorMode e perfil selecionam capacidades relevantes', () => {
+  assert.equal(visitorMode({ pageType: 'sales' }), 'persuade');
+  assert.equal(visitorMode({ pageType: 'advertorial' }), 'read');
+  assert.equal(visitorMode({ pageType: 'saas' }), 'operate');
+  const { profile } = designProfile('<html><head><style>:root{--a:#111}</style></head><body><h1>x</h1></body></html>', { pageType: 'sales', scrollMode: 'static' });
+  const caps = profile.map((p) => p.cap);
+  assert.ok(['layout', 'typeset', 'audit', 'harden', 'polish'].every((c) => caps.includes(c)));
+  assert.ok(caps.includes('adapt'), 'sem media query deve sugerir adapt');
+});
+t('design-quality: acha AI-purple, nested card, hierarquia fraca e achata o gradiente', () => {
+  const html = '<!DOCTYPE html><html lang="pt-BR"><head><style>:root{--accent:#10b981}.hero{background:linear-gradient(135deg,#7c3aed,#3b82f6)}h1{font-size:14px}</style></head><body><main><section class="pf-card"><div class="pf-card">nested</div></section><h1 style="font-size:1.1rem">t</h1></main></body></html>';
+  const r = designQuality(html, { pageType: 'sales', scrollMode: 'static' });
+  assert.ok(!/7c3aed/.test(r.html), 'gradiente AI-purple deveria ter sido achatado');
+  assert.ok(r.fixes.some((f) => /AI-purple|violeta/i.test(f)));
+  assert.ok(r.findings.some((f) => /card dentro de card|nested/i.test(f.msg)));
+  assert.ok(r.findings.some((f) => /h1|tese|presença/i.test(f.msg)));
+  assert.ok(r.score < 9 && r.score >= 0);
+  assert.ok(['Exemplar', 'Sólido', 'Genérico em partes', 'Genérico'].includes(r.band));
+});
+t('design-quality: página limpa do mock passa sem correções de design', () => {
+  const { value } = sanitizeBrief({ productName: 'Aurora', description: 'programa de hábitos', checkoutUrl: 'https://pay.x/c' });
+  const plan = mockPlan(value);
+  const secs = mockSections(value, plan, plan.sections.map((s) => s.id));
+  const pp = postprocess(assemblePage(value, plan, secs), value);
+  const r = designQuality(pp.html, value);
+  assert.equal(r.fixes.length, 0, `mock não deveria disparar correção: ${r.fixes.join('; ')}`);
+  assert.ok(r.score >= 7, `design score baixo no mock: ${r.score} — ${r.findings.map((f) => f.msg).join('; ')}`);
+  assert.equal(r.mode, 'persuade');
+});
+t('prompt: camada Impeccable (craft-floor) está nos prompts de plan e render', () => {
+  const { value } = sanitizeBrief({ productName: 'X', description: 'y' });
+  const p = buildPlanMessages(value);
+  const rnd = buildRenderMessages(value, mockPlan(value), ['hero']);
+  assert.ok(/craft-floor|CAMADA DE DESIGN/i.test(p.system));
+  assert.ok(/squint test|BANIDOS/i.test(p.system));
+  assert.ok(/CAMADA DE DESIGN|BANIDOS/i.test(rnd.system));
 });
 
 // ---------- FASE 3: pipeline + comercial ----------

@@ -55,3 +55,10 @@ VERCEL_OIDC_TOKEN
 
 # Skills de agente vendorizadas (npx skills add) — ferramentas, não código do produto
 .claude/skills/
+
+# Impeccable: config e surface briefs são versionados; artefatos de sessão não
+.impeccable/build/
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/live/
+.impeccable/config.local.json

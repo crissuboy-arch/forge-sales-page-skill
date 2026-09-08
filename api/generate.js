@@ -15,6 +15,7 @@ import { buildMessages, buildSectionMessages, buildPlanMessages, buildRenderMess
 import { postprocess } from './_lib/postprocess.js';
 import { assemblePage, parseJsonLoose } from './_lib/assemble.js';
 import { impeccableQa } from './_lib/impeccable-qa.js';
+import { designQuality } from './_lib/design-quality.js';
 import { mockGenerate, mockPlan, mockSections } from './_lib/mock.js';
 import { readJson, methodGuard } from './_lib/http.js';
 
@@ -96,18 +97,21 @@ export default async function handler(req, res) {
       if (!plan.sections || !Object.keys(sections).length) return finish({ t: 'error', code: 'BAD_REQUEST', error: 'assemble precisa de plan.sections e sections.' });
       const doc = assemblePage(brief, plan, sections);
       const pp = postprocess(doc, brief);
-      const qa = impeccableQa(pp.html, brief); // 1 avaliação + 1 correção
+      const dq = designQuality(pp.html, brief);  // DESIGN QUALITY (Impeccable, sem IA)
+      const qa = impeccableQa(dq.html, brief);   // QA técnico + 1 correção
       return finish({
         t: 'done', ok: pp.ok, html: qa.html, warnings: pp.warnings, errors: pp.errors,
         qa: { score: qa.score, band: qa.band, dims: qa.dims, findings: qa.findings.slice(0, 20), fixes: qa.fixes },
+        design: { mode: dq.mode, score: dq.score, band: dq.band, profile: dq.profile, findings: dq.findings.slice(0, 12), fixes: dq.fixes },
         meta: { provider: mock ? 'mock' : provider.name, model: payload.model || (mock ? 'mock' : provider.model), pageType: brief.pageType, scrollMode: brief.scrollMode, sensitive: brief.sensitive, affiliate: brief.affiliate, ms: Date.now() - started, step: 'assemble' },
       });
     }
 
     // ---------------- QA avulso (rodar Impeccable numa HTML já pronta) ----------------
     if (step === 'qa') {
-      const qa = impeccableQa(String(payload.html || ''), brief);
-      return finish({ t: 'done', ok: true, html: qa.html, qa: { score: qa.score, band: qa.band, dims: qa.dims, findings: qa.findings.slice(0, 25), fixes: qa.fixes }, meta: { step: 'qa', ms: Date.now() - started } });
+      const dq = designQuality(String(payload.html || ''), brief);
+      const qa = impeccableQa(dq.html, brief);
+      return finish({ t: 'done', ok: true, html: qa.html, qa: { score: qa.score, band: qa.band, dims: qa.dims, findings: qa.findings.slice(0, 25), fixes: qa.fixes }, design: { mode: dq.mode, score: dq.score, band: dq.band, profile: dq.profile, findings: dq.findings.slice(0, 15), fixes: dq.fixes }, meta: { step: 'qa', ms: Date.now() - started } });
     }
 
     // ---------------- PLAN ----------------
@@ -150,13 +154,15 @@ export default async function handler(req, res) {
       if (mock) {
         const html = mockGenerate(brief, { instruction: payload.instruction });
         const pp = postprocess(html, brief);
-        return finish({ t: 'done', ok: pp.ok, html: pp.html, warnings: ['MODO MOCK.', ...pp.warnings], errors: pp.errors, meta: { model: 'mock', ms: Date.now() - started } });
+        const dqm = designQuality(pp.html, brief);
+        return finish({ t: 'done', ok: pp.ok, html: dqm.html, warnings: ['MODO MOCK.', ...pp.warnings], errors: pp.errors, design: { mode: dqm.mode, score: dqm.score, band: dqm.band, profile: dqm.profile, findings: dqm.findings.slice(0, 10), fixes: dqm.fixes }, meta: { model: 'mock', ms: Date.now() - started } });
       }
       const { system, user } = buildSectionMessages(brief, payload.currentHtml, payload.instruction);
       const r = await callAI({ system, user, temperature: 0.3, maxTokens: 8000, budgetMs: 54000 });
       const pp = postprocess(r.content, brief);
       if (!pp.ok && !pp.html) return finish({ t: 'error', code: 'BAD_MODEL_OUTPUT', error: `A IA não devolveu um HTML válido. ${pp.errors.join(' ')}`.trim() });
-      return finish({ t: 'done', ok: pp.ok, html: pp.html, warnings: pp.warnings, errors: pp.errors, meta: { provider: provider.name, model: r.model, ms: Date.now() - started, step: 'section' } });
+      const dq = designQuality(pp.html, brief);
+      return finish({ t: 'done', ok: pp.ok, html: dq.html, warnings: pp.warnings, errors: pp.errors, design: { mode: dq.mode, score: dq.score, band: dq.band, profile: dq.profile, findings: dq.findings.slice(0, 10), fixes: dq.fixes }, meta: { provider: provider.name, model: r.model, ms: Date.now() - started, step: 'section' } });
     }
 
     // ---------------- FULL (legado — uma requisição) ----------------

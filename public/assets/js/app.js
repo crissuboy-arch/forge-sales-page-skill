@@ -409,12 +409,13 @@
 
     function finishOk(f, msg) {
       if (!f || !f.html) { fail(new Error((f && f.errors && f.errors.join(' ')) || 'A IA não devolveu uma página.')); return; }
-      state.generated = { html: f.html, meta: f.meta || {}, warnings: f.warnings || [], errors: f.errors || [], qa: f.qa || (state.generated && state.generated.qa) || null };
+      var prev = state.generated || {};
+      state.generated = { html: f.html, meta: f.meta || {}, warnings: f.warnings || [], errors: f.errors || [], qa: f.qa || prev.qa || null, design: f.design || prev.design || null };
       state.generatedAt = Date.now();
       saveProject();
       save();
       location.hash = '#/preview';
-      toast(msg + (f.qa ? '  ·  QA ' + f.qa.score + '/20' : ''));
+      toast(msg + (f.qa ? '  ·  QA ' + f.qa.score + '/20' : '') + (f.design ? ' · Design ' + f.design.score + '/10' : ''));
     }
     function fail(err) {
       if (err && err.isConfig) showFatal('Falta a NVIDIA_API_KEY', err.message, true);
@@ -464,18 +465,29 @@
     // botão Antes × Depois só quando a página veio de um lead com site atual
     var lead = state.leadSource && state.leadSource.slug && (window.PFStore && PFStore.leads.get(state.leadSource.slug));
     $('#btnCompare').hidden = !state.leadSource;
-    renderQaReport(g.qa);
+    renderQaReport(g.qa, g.design);
   }
 
-  function renderQaReport(qa) {
+  function renderQaReport(qa, design) {
     var el = $('#qaReport');
-    if (!qa) { el.hidden = true; el.innerHTML = ''; return; }
+    if (!qa && !design) { el.hidden = true; el.innerHTML = ''; return; }
     el.hidden = false;
-    var dims = qa.dims || {};
-    var chips = Object.keys(dims).map(function (k) { return '<span class="qa-dim">' + k + ' ' + dims[k] + '/4</span>'; }).join('');
-    el.innerHTML = '<div class="qa-report__head"><strong>Impeccable QA: ' + qa.score + '/20 · ' + escapeHtml(qa.band || '') + '</strong>' + chips + '</div>' +
-      (qa.fixes && qa.fixes.length ? '<p class="qa-fixes">Correções aplicadas: ' + qa.fixes.map(escapeHtml).join(' · ') + '</p>' : '') +
-      (qa.findings && qa.findings.length ? '<ul class="qa-findings">' + qa.findings.slice(0, 8).map(function (f) { return '<li>[' + f.severity + '] ' + escapeHtml(f.category) + ': ' + escapeHtml(f.msg) + '</li>'; }).join('') + '</ul>' : '');
+    var html = '';
+    if (qa) {
+      var dims = qa.dims || {};
+      var chips = Object.keys(dims).map(function (k) { return '<span class="qa-dim">' + k + ' ' + dims[k] + '/4</span>'; }).join('');
+      html += '<div class="qa-report__head"><strong>Impeccable QA: ' + qa.score + '/20 · ' + escapeHtml(qa.band || '') + '</strong>' + chips + '</div>' +
+        (qa.fixes && qa.fixes.length ? '<p class="qa-fixes">Correções técnicas: ' + qa.fixes.map(escapeHtml).join(' · ') + '</p>' : '') +
+        (qa.findings && qa.findings.length ? '<ul class="qa-findings">' + qa.findings.slice(0, 8).map(function (f) { return '<li>[' + f.severity + '] ' + escapeHtml(f.category) + ': ' + escapeHtml(f.msg) + '</li>'; }).join('') + '</ul>' : '');
+    }
+    if (design) {
+      var caps = (design.profile || []).map(function (p) { return '<span class="qa-dim">' + escapeHtml(p.cap) + '</span>'; }).join('');
+      html += '<div class="qa-report__head" style="margin-top:.7rem"><strong>Design (Impeccable): ' + design.score + '/10 · ' + escapeHtml(design.band || '') + ' · modo ' + escapeHtml(design.mode || '') + '</strong></div>' +
+        (caps ? '<p class="qa-fixes" style="color:var(--text-soft)">Capacidades aplicáveis a esta página: ' + caps + '</p>' : '') +
+        (design.fixes && design.fixes.length ? '<p class="qa-fixes">Correções de design: ' + design.fixes.map(escapeHtml).join(' · ') + '</p>' : '') +
+        (design.findings && design.findings.length ? '<ul class="qa-findings">' + design.findings.slice(0, 8).map(function (f) { return '<li>[' + f.severity + '] ' + escapeHtml(f.msg) + '</li>'; }).join('') + '</ul>' : '');
+    }
+    el.innerHTML = html;
   }
 
   $$('.pv-devices button').forEach(function (b) {
@@ -514,10 +526,12 @@
       .then(function (res) { return res.text(); })
       .then(function (txt) {
         var f = txt.trim().split('\n').map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean).pop();
-        if (f && f.qa) {
-          state.generated.qa = f.qa;
+        if (f && (f.qa || f.design)) {
+          if (f.qa) state.generated.qa = f.qa;
+          if (f.design) state.generated.design = f.design;
           if (f.html) state.generated.html = f.html;
-          save(); renderPreview(); toast('QA: ' + f.qa.score + '/20 (' + f.qa.band + ')');
+          save(); renderPreview();
+          toast('QA ' + (f.qa ? f.qa.score + '/20' : '') + (f.design ? ' · Design ' + f.design.score + '/10' : ''));
         } else toast('QA sem retorno.');
       }).catch(function () { toast('Falha no QA.'); });
   });
@@ -696,6 +710,7 @@
       html: state.generated.html,
       meta: state.generated.meta || {},
       qa: state.generated.qa || null,
+      design: state.generated.design || null,
       leadSlug: state.leadSource && state.leadSource.slug || null,
       leadNome: state.leadSource && state.leadSource.nome || null
     };
@@ -713,7 +728,7 @@
   function openProject(id, opts) {
     var p = window.PFStore && PFStore.projects.get(id);
     if (!p) { toast('Projeto não encontrado.'); return; }
-    state.generated = { html: p.html, meta: p.meta || {}, warnings: [], errors: [], qa: p.qa || null };
+    state.generated = { html: p.html, meta: p.meta || {}, warnings: [], errors: [], qa: p.qa || null, design: p.design || null };
     state.currentProjectId = id;
     state.brief = Object.assign({}, blank().brief, state.brief || {}, { projectName: p.name, pageType: p.pageType || 'sales' });
     state.leadSource = p.leadSlug ? { kind: 'lead', slug: p.leadSlug, nome: p.leadNome } : null;
