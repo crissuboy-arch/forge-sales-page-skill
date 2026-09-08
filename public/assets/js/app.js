@@ -69,12 +69,16 @@
     $('#mainnav').classList.remove('is-open');
     var nt = $('#navToggle'); if (nt) nt.setAttribute('aria-expanded', 'false');
     window.scrollTo(0, 0);
-    renderCrumbs(base, param);
+    // A troca de view (acima) nunca pode ser bloqueada por um erro de render de
+    // conteúdo — cada render roda isolado. Se um falhar, a rota certa continua
+    // visível e a navegação segue funcionando.
+    var run = function (label, fn) { try { fn(); } catch (e) { if (window.console) console.warn('[route] render "' + label + '" falhou:', e && e.message || e); } };
+    run('crumbs', function () { renderCrumbs(base, param); });
     try { PFStore.ui.set({ lastRoute: hash }); } catch (e) {}
-    if (id === 'view-new') renderWizard();
-    if (id === 'view-preview') renderPreview();
-    if (id === 'view-compare') renderCompare();
-    if (window.PFProspect) PFProspect.onRoute(base, param, health);
+    if (id === 'view-new') run('wizard', renderWizard);
+    if (id === 'view-preview') run('preview', renderPreview);
+    if (id === 'view-compare') run('compare', renderCompare);
+    if (window.PFProspect) run('onRoute:' + base, function () { PFProspect.onRoute(base, param, health); });
   }
 
   var CRUMB_LABEL = {
@@ -148,9 +152,10 @@
       } else {
         $('#healthBanner').hidden = true;
       }
-      if (window.PFProspect) { PFProspect.renderKpis(); PFProspect.onRoute(currentBase(), currentParam(), health); }
+      if (window.PFProspect) safe(function () { PFProspect.renderKpis(); PFProspect.onRoute(currentBase(), currentParam(), health); });
     });
   }
+  function safe(fn) { try { fn(); } catch (e) { if (window.console) console.warn('[pageforge]', e && e.message || e); } }
   function currentBase() { return '/' + ((location.hash.replace(/^#/, '') || '/').split('/').filter(Boolean)[0] || ''); }
   function currentParam() { return (location.hash.replace(/^#/, '') || '/').split('/').filter(Boolean)[1] || ''; }
 
@@ -834,9 +839,9 @@
   }
 
   /* ------------------------------------------------- boot */
-  checkHealth();
+  safe(checkHealth);
   if (!location.hash) location.hash = '#/';
-  route();
-  if (window.PFProspect) { PFProspect.renderKpis(); PFProspect.renderDashboard(health); }
-  maybeShowOnboarding(false);
+  safe(route);
+  if (window.PFProspect) safe(function () { PFProspect.renderKpis(); PFProspect.renderDashboard(health); });
+  safe(function () { maybeShowOnboarding(false); });
 })();
