@@ -31,7 +31,18 @@ if (!fs.existsSync(path.join(ROOT, 'api', '_lib', 'knowledge.generated.js'))) {
 const handlerCache = new Map();
 async function loadHandler(name) {
   if (handlerCache.has(name)) return handlerCache.get(name);
-  const file = path.join(ROOT, 'api', `${name}.js`);
+  let file = path.join(ROOT, 'api', `${name}.js`);
+  if (!fs.existsSync(file)) {
+    // rota dinâmica no estilo Vercel: api/foo/[param].js — só o último
+    // segmento é dinâmico (suficiente para as rotas deste projeto).
+    const parts = name.split('/');
+    const last = parts.pop();
+    const dir = path.join(ROOT, 'api', ...parts);
+    if (last && fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+      const bracket = fs.readdirSync(dir).find((f) => /^\[.+\]\.js$/.test(f));
+      if (bracket) file = path.join(dir, bracket);
+    }
+  }
   if (!fs.existsSync(file)) return null;
   const mod = await import(`${pathToFileURL(file).href}?t=${Date.now()}`);
   const h = mod.default;
