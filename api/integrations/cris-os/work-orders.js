@@ -53,6 +53,12 @@ function toResultBody(job, extra = {}) {
   if (job.completed_at) body.completed_at = job.completed_at;
   if (job.error) body.error = job.error;
   if (job.artifact) body.artifact = job.artifact;
+  // Diagnóstico operacional (provider/model/timing/publicação) -- nada
+  // secreto aqui, só o que já era calculado e gravado em job.meta mas nunca
+  // chegava ao chamador. Sem isso, um artefato sem preview_url/deployment_url
+  // (ex.: publicação no Blob falhou) era indistinguível de sucesso completo
+  // do lado de quem chama esta API -- correção pós-incidente real (Cris OS).
+  if (job.meta) body.meta = job.meta;
   if (extra.idempotent) body.idempotent = true;
   return body;
 }

@@ -141,6 +141,11 @@ async function main() {
     chk(r.status === 200 && firstBody.status === 'COMPLETED', 'work order válido -> 200 COMPLETED (' + firstBody.status + ')');
     chk(!!(firstBody.artifact && firstBody.artifact.page_id && firstBody.artifact.checksum), 'artefato real: page_id + checksum presentes');
     chk(!!(firstBody.artifact && firstBody.artifact.preview_url && firstBody.artifact.preview_url.includes('/demo/')), 'artefato real: preview_url aponta para /demo/<page_id> (mesmo mecanismo de Publicar Demo)');
+    // Correção pós-incidente real (Cris OS): sem `meta` na resposta, uma
+    // falha silenciosa de publicação (Blob) era indistinguível de sucesso
+    // completo para quem chama esta API -- garante que o diagnóstico chega.
+    chk(!!firstBody.meta, 'resposta expõe meta (provider/model/publish) -- diagnóstico de publicação nunca mais fica escondido');
+    chk(!!(firstBody.meta && firstBody.meta.publish && firstBody.meta.publish.status), 'meta.publish.status presente -- permite saber se a publicação no Blob realmente funcionou');
     if (firstBody.artifact && firstBody.artifact.preview_url) {
       const pr = await fetch(firstBody.artifact.preview_url);
       const html = await pr.text();
