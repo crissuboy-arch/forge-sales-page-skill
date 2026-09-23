@@ -1,7 +1,7 @@
 // POST /api/demo   { slug, html, nome }   -> publica/atualiza a demo pública
 // GET  /api/demo                          -> health do módulo de publicação
 // GET  /api/demo?list=1                    -> demos publicadas
-import { putDemo, listDemos, deleteDemo, blobConfigured } from './_lib/blob.js';
+import { putDemo, listDemos, deleteDemo, blobConfigured, blobStoreEmUso } from './_lib/blob.js';
 import { readJson, send, methodGuard } from './_lib/http.js';
 
 export const config = { maxDuration: 30 };
@@ -26,11 +26,12 @@ export default async function handler(req, res) {
     const mock = process.env.PAGEFORGE_MOCK === '1';
     return send(res, 200, {
       ok: true, module: 'demo', storage: 'vercel-blob',
+      store: blobStoreEmUso(),
       keyConfigured: blobConfigured(), mock,
       ready: blobConfigured() || mock,
       message: blobConfigured()
-        ? 'Publicação de demos ativa (Vercel Blob).'
-        : (mock ? 'Modo dev — demos em memória.' : 'BLOB_READ_WRITE_TOKEN não configurado. Configure em Vercel → Storage → Blob para publicar demos com URL pública; enquanto isso use Exportar HTML/ZIP.'),
+        ? `Publicação de demos ativa (Vercel Blob, store: ${blobStoreEmUso()}).`
+        : (mock ? 'Modo dev — demos em memória.' : 'Nenhum token de Blob configurado (PAGEFORGE_PUBLIC_READ_WRITE_TOKEN ou BLOB_READ_WRITE_TOKEN). Configure em Vercel → Storage → Blob para publicar demos com URL pública; enquanto isso use Exportar HTML/ZIP.'),
     });
   }
   if (!methodGuard(req, res, ['GET', 'POST', 'DELETE'])) return;

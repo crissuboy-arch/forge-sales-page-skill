@@ -1,11 +1,24 @@
 // blob.js — publicação de demos via Vercel Blob (REST, sem dependência).
-// Token: BLOB_READ_WRITE_TOKEN (Vercel → Storage → Blob). Sem token, o módulo
-// degrada: em dev (PAGEFORGE_MOCK=1) usa memória; em produção retorna pendência.
+//
+// Store PÚBLICO dedicado (pageforge-ai-public, criado após incidente real:
+// o Store antigo estava configurado como PRIVATE, e toda escrita de demo
+// falhava com "Cannot use public access on a private store" -- nenhuma
+// publicação nunca gerava URL). PAGEFORGE_PUBLIC_READ_WRITE_TOKEN (novo
+// Store, PUBLIC) tem prioridade; BLOB_READ_WRITE_TOKEN (Store antigo)
+// continua funcionando como fallback -- NUNCA removido, só não é mais o
+// primeiro escolhido para publicação de demos.
 const API = 'https://blob.vercel-storage.com';
 const PREFIX = 'demos/';
 
-function token() { return (process.env.BLOB_READ_WRITE_TOKEN || '').trim(); }
+function token() {
+  return (process.env.PAGEFORGE_PUBLIC_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN || '').trim();
+}
 export function blobConfigured() { return Boolean(token()); }
+export function blobStoreEmUso() {
+  if (process.env.PAGEFORGE_PUBLIC_READ_WRITE_TOKEN) return 'pageforge-ai-public';
+  if (process.env.BLOB_READ_WRITE_TOKEN) return 'legado (private)';
+  return null;
+}
 
 // slug -> { html, nome, at }  (só dev/mock). Em globalThis para sobreviver a
 // re-imports do módulo (o dev-server recarrega as rotas a cada request).
