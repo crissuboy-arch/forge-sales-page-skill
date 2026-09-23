@@ -40,10 +40,11 @@ export default async function handler(req, res) {
 
   const mock = process.env.PAGEFORGE_MOCK === '1';
   const provider = getProvider();
+  const providerEnvVar = `${provider.name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_API_KEY`;
   if (!mock && !provider.isConfigured()) {
     return finish({
-      t: 'error', code: 'NVIDIA_KEY_MISSING',
-      error: 'NVIDIA_API_KEY não está configurada no servidor. Configure a variável de ambiente na Vercel (Settings → Environment Variables) e faça um novo deploy. Todo o resto da PageForge AI funciona; só a geração com IA fica bloqueada até a chave existir.',
+      t: 'error', code: 'PROVIDER_KEY_MISSING',
+      error: `${providerEnvVar} não está configurada no servidor. Configure a variável de ambiente na Vercel (Settings → Environment Variables) e faça um novo deploy. Todo o resto da PageForge AI funciona; só a geração com IA fica bloqueada até a chave existir.`,
     });
   }
 
@@ -66,7 +67,7 @@ export default async function handler(req, res) {
       return await provider.chat({ system, user, temperature, maxTokens, signal: ac.signal, deadline: started + budgetMs - 3000, stream: true, onToken });
     } catch (err) {
       if (aborted || err.name === 'AbortError' || /aborted/i.test(err.message || '')) {
-        const e = new ProviderError('O servidor de IA (NVIDIA) demorou mais que o limite e a etapa foi cancelada. O endpoint gratuito da NVIDIA costuma entrar em fila em horários de pico — tente de novo em alguns minutos. Se persistir, use uma NVIDIA_API_KEY com cota de inferência maior ou defina NVIDIA_MODEL para um modelo mais rápido.', 504);
+        const e = new ProviderError(`O servidor de IA (${provider.name}) demorou mais que o limite e a etapa foi cancelada. Tente de novo em alguns instantes, um modo de scroll mais leve ou um briefing mais curto. Se persistir, verifique a cota/disponibilidade de ${providerEnvVar}.`, 504);
         e.retriable = true;
         throw e;
       }
@@ -180,7 +181,7 @@ export default async function handler(req, res) {
       meta: { provider: provider.name, model: r.model, pageType: brief.pageType, scrollMode: brief.scrollMode, ms: Date.now() - started, step: 'full' },
     });
   } catch (err) {
-    if (err instanceof MissingKeyError) return finish({ t: 'error', code: 'NVIDIA_KEY_MISSING', error: 'NVIDIA_API_KEY ausente no servidor.' });
+    if (err instanceof MissingKeyError) return finish({ t: 'error', code: 'PROVIDER_KEY_MISSING', error: `${providerEnvVar} ausente no servidor.` });
     if (err instanceof ProviderError) return finish({ t: 'error', code: 'PROVIDER_ERROR', error: err.message, retriable: !err.fatal, raw: err.raw || err.detail || null });
     return finish({ t: 'error', code: 'UNEXPECTED', error: `Erro inesperado: ${err.message}` });
   }

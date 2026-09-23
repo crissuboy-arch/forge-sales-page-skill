@@ -11,9 +11,14 @@ export default async function handler(req, res) {
 
   const items = [
     {
-      id: 'nvidia', nome: 'NVIDIA', papel: 'Geração de páginas (IA)',
+      id: 'openrouter', nome: 'OpenRouter', papel: 'Geração de páginas (IA) — provider ativo',
+      configured: has('OPENROUTER_API_KEY'),
+      hint: 'Vercel → Settings → Environment Variables → OPENROUTER_API_KEY. Modelo: OPENROUTER_MODEL (default openai/gpt-4o-mini).',
+    },
+    {
+      id: 'nvidia', nome: 'NVIDIA', papel: 'Provider de IA alternativo (reserva — AI_PROVIDER=nvidia reativa)',
       configured: has('NVIDIA_API_KEY'),
-      hint: 'Vercel → Settings → Environment Variables → NVIDIA_API_KEY',
+      hint: 'Provider preservado em api/_lib/providers.js. Não é mais o default desde a Etapa 11.',
     },
     {
       id: 'aisa', nome: 'AIsa', papel: 'Prospecção (Maps + Instagram + IA)',
@@ -53,7 +58,7 @@ export default async function handler(req, res) {
     updatedAt: new Date().toISOString(),
     integrations: items.map((i) => ({
       ...i,
-      status: i.configured ? 'CONFIGURADO' : (mock && ['nvidia', 'aisa', 'blob'].includes(i.id) ? 'MODO EXEMPLO' : 'NÃO CONFIGURADO'),
+      status: i.configured ? 'CONFIGURADO' : (mock && ['openrouter', 'nvidia', 'aisa', 'blob'].includes(i.id) ? 'MODO EXEMPLO' : 'NÃO CONFIGURADO'),
     })),
   });
 }

@@ -8,6 +8,7 @@ export default async function handler(req, res) {
   const mock = process.env.PAGEFORGE_MOCK === '1';
   const provider = getProvider();
   const configured = provider.isConfigured();
+  const envVar = `${provider.name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_API_KEY`;
   send(res, 200, {
     ok: true,
     app: 'PageForge AI',
@@ -18,9 +19,9 @@ export default async function handler(req, res) {
     ready: configured || mock,
     knowledgeBuiltAt: KNOWLEDGE_BUILT_AT || null,
     message: configured
-      ? 'Provider NVIDIA configurado.'
+      ? `Provider ${provider.name} configurado.`
       : (mock
         ? 'Modo MOCK ativo (sem IA real) — apenas para desenvolvimento.'
-        : 'NVIDIA_API_KEY não configurada. Configure a variável de ambiente para gerar páginas.'),
+        : `${envVar} não configurada. Configure a variável de ambiente para gerar páginas.`),
   });
 }

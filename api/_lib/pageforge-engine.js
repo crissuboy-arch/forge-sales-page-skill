@@ -25,7 +25,8 @@ export async function generatePageForBrief(brief, opts = {}) {
   const provider = getProvider();
 
   if (!mock && !provider.isConfigured()) {
-    const err = new Error('NVIDIA_API_KEY não configurada no servidor — a geração real de páginas está bloqueada até a chave existir.');
+    const envVar = `${provider.name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_API_KEY`;
+    const err = new Error(`${envVar} não configurada no servidor — a geração real de páginas está bloqueada até a chave existir.`);
     err.code = 'PROVIDER_KEY_MISSING';
     throw err;
   }

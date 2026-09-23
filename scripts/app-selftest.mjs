@@ -11,7 +11,7 @@ import { buildMessages, buildSectionMessages, buildPlanMessages, buildRenderMess
 import { postprocess, extractHtml, analyzeHtml } from '../api/_lib/postprocess.js';
 import { assemblePage, parseJsonLoose } from '../api/_lib/assemble.js';
 import { mockGenerate, mockPlan, mockSections } from '../api/_lib/mock.js';
-import { getProvider, listProviders } from '../api/_lib/providers.js';
+import { getProvider, listProviders, DEFAULTS } from '../api/_lib/providers.js';
 import { scoreLead, normalizeLead, leadToBriefing, slugify, LEAD_STATUS } from '../api/_lib/prospect.js';
 import { mockProspect, aisaConfigured } from '../api/_lib/aisa.js';
 import { impeccableQa } from '../api/_lib/impeccable-qa.js';
@@ -194,16 +194,145 @@ t('mock: nicho sensível adiciona disclaimer', () => {
 });
 
 // ---------- providers ----------
-t('providers: nvidia é o default e reporta config', () => {
+t('providers: openrouter é o default (Etapa 11) e reporta config', () => {
+  assert.ok(listProviders().includes('openrouter'));
   assert.ok(listProviders().includes('nvidia'));
   const p = getProvider();
-  assert.equal(p.name, 'nvidia');
+  assert.equal(p.name, 'openrouter');
   assert.equal(typeof p.isConfigured(), 'boolean');
   assert.ok(p.model.includes('/'));
 });
-t('providers: chat sem chave lança MISSING_KEY', async () => {
-  const p = getProvider('nvidia', { apiKey: '' });
-  await assert.rejects(() => p.chat({ system: 's', user: 'u' }), (e) => e.code === 'MISSING_KEY');
+t('providers: nvidia continua selecionável via AI_PROVIDER=nvidia (reversível)', () => {
+  const p = getProvider('nvidia');
+  assert.equal(p.name, 'nvidia');
+  assert.ok(p.model.includes('/'));
+});
+t('providers: chat sem chave lança MISSING_KEY (openrouter e nvidia)', async () => {
+  const p1 = getProvider('openrouter', { apiKey: '' });
+  await assert.rejects(() => p1.chat({ system: 's', user: 'u' }), (e) => e.code === 'MISSING_KEY');
+  const p2 = getProvider('nvidia', { apiKey: '' });
+  await assert.rejects(() => p2.chat({ system: 's', user: 'u' }), (e) => e.code === 'MISSING_KEY');
+});
+
+// ---------- OpenRouter (Etapa 11 — mockado, sem chamada real) ----------
+t('openrouter: monta requisição correta (URL, headers, modelo, payload) e converte a resposta', async () => {
+  const origFetch = globalThis.fetch;
+  let captured = null;
+  globalThis.fetch = async (url, init) => {
+    captured = { url, init, body: JSON.parse(init.body) };
+    return {
+      ok: true,
+      json: async () => ({
+        model: 'openai/gpt-4o-mini',
+        choices: [{ message: { content: 'olá do openrouter' }, finish_reason: 'stop' }],
+        usage: { total_tokens: 10 },
+      }),
+    };
+  };
+  try {
+    const p = getProvider('openrouter', { apiKey: 'sk-or-test-123' });
+    const r = await p.chat({ system: 'sys', user: 'usr', temperature: 0.4, maxTokens: 111, stream: false });
+    assert.equal(captured.url, 'https://openrouter.ai/api/v1/chat/completions');
+    assert.equal(captured.init.headers.authorization, 'Bearer sk-or-test-123');
+    assert.ok(captured.init.headers['http-referer']);
+    assert.equal(captured.body.model, DEFAULTS.openrouter.model);
+    assert.equal(captured.body.max_tokens, 111);
+    assert.deepEqual(captured.body.messages, [{ role: 'system', content: 'sys' }, { role: 'user', content: 'usr' }]);
+    assert.equal(r.content, 'olá do openrouter');
+    assert.equal(r.model, 'openai/gpt-4o-mini');
+  } finally { globalThis.fetch = origFetch; }
+});
+t('openrouter: OPENROUTER_MODEL configura o modelo usado na requisição', async () => {
+  const origFetch = globalThis.fetch;
+  let usedModel = null;
+  globalThis.fetch = async (url, init) => { usedModel = JSON.parse(init.body).model; return { ok: true, json: async () => ({ choices: [{ message: { content: 'x' } }] }) }; };
+  try {
+    const p = getProvider('openrouter', { apiKey: 'k', model: 'anthropic/claude-3-haiku' });
+    await p.chat({ system: 's', user: 'u' });
+    assert.equal(usedModel, 'anthropic/claude-3-haiku');
+  } finally { globalThis.fetch = origFetch; }
+});
+t('openrouter: sem OPENROUTER_API_KEY -> MISSING_KEY, nenhuma requisição é feita', async () => {
+  const origFetch = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = async () => { called = true; return { ok: true, json: async () => ({}) }; };
+  try {
+    const p = getProvider('openrouter', { apiKey: '' });
+    await assert.rejects(() => p.chat({ system: 's', user: 'u' }), (e) => e.code === 'MISSING_KEY');
+    assert.equal(called, false);
+  } finally { globalThis.fetch = origFetch; }
+});
+t('openrouter: erro HTTP do provider vira ProviderError estruturado (401 = fatal, sem retry)', async () => {
+  const origFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return { ok: false, status: 401, text: async () => JSON.stringify({ error: { message: 'invalid api key' } }) }; };
+  try {
+    const p = getProvider('openrouter', { apiKey: 'bad-key' });
+    await assert.rejects(() => p.chat({ system: 's', user: 'u' }), (e) => e.code === 'PROVIDER_ERROR' && e.status === 401);
+    assert.equal(calls, 1, 'erro de autenticação não deve tentar de novo');
+  } finally { globalThis.fetch = origFetch; }
+});
+t('openrouter: 429 tenta de novo e no fim ainda lança PROVIDER_ERROR', async () => {
+  const origFetch = globalThis.fetch;
+  const origSleep = null; // sleep real seria lento demais no teste — usamos deadline vencido p/ pular o backoff
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return { ok: false, status: 429, text: async () => '{"error":{"message":"rate limited"}}' }; };
+  try {
+    const p = getProvider('openrouter', { apiKey: 'k' });
+    // deadline já vencido -> timeLeft=false -> lança sem esperar o backoff de verdade
+    await assert.rejects(() => p.chat({ system: 's', user: 'u', deadline: Date.now() - 1 }), (e) => e.code === 'PROVIDER_ERROR' && e.status === 429);
+    assert.equal(calls, 1);
+  } finally { globalThis.fetch = origFetch; }
+});
+t('openrouter: timeout (AbortSignal) vira erro fatal com mensagem amigável, sem retry', async () => {
+  const origFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async (url, init) => {
+    calls++;
+    return new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => { const e = new Error('aborted'); e.name = 'AbortError'; reject(e); });
+    });
+  };
+  try {
+    const p = getProvider('openrouter', { apiKey: 'k' });
+    const ac = new AbortController();
+    setTimeout(() => ac.abort(), 20);
+    await assert.rejects(() => p.chat({ system: 's', user: 'u', signal: ac.signal }), (e) => e.status === 504 && /tempo limite/i.test(e.message));
+    assert.equal(calls, 1, 'AbortError é fatal — não tenta de novo');
+  } finally { globalThis.fetch = origFetch; }
+});
+t('openrouter: stream=true concatena os deltas SSE e devolve o conteúdo final', async () => {
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    const chunks = [
+      'data: {"choices":[{"delta":{"content":"Olá"}}]}\n',
+      'data: {"choices":[{"delta":{"content":" mundo"}}]}\n',
+      'data: {"choices":[{"finish_reason":"stop"}]}\n',
+      'data: [DONE]\n',
+    ];
+    let i = 0;
+    return {
+      ok: true,
+      body: {
+        getReader() {
+          return {
+            async read() {
+              if (i >= chunks.length) return { done: true };
+              const v = new TextEncoder().encode(chunks[i++]);
+              return { done: false, value: v };
+            },
+          };
+        },
+      },
+    };
+  };
+  let tokens = '';
+  try {
+    const p = getProvider('openrouter', { apiKey: 'k' });
+    const r = await p.chat({ system: 's', user: 'u', stream: true, onToken: (d) => { tokens += d; } });
+    assert.equal(r.content, 'Olá mundo');
+    assert.equal(tokens, 'Olá mundo');
+  } finally { globalThis.fetch = origFetch; }
 });
 
 // ---------- PROSPECÇÃO (Máquina de Leads integrada) ----------

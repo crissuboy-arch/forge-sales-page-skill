@@ -132,11 +132,12 @@
       health.integrations = (r[3] && r[3].integrations) || [];
       health.offline = !!(r[0] && r[0].__err) && !!(r[3] && r[3].__err);
       var hp = health.pages, pr = health.prospect;
-      var fm = $('#footModel'); if (fm && hp.model) fm.textContent = 'NVIDIA · ' + hp.model;
+      var provLabel = (hp.provider || 'openrouter').toUpperCase();
+      var fm = $('#footModel'); if (fm && hp.model) fm.textContent = provLabel + ' · ' + hp.model;
       var hs = $('#homeStatus');
       if (hs) {
         var partes = [];
-        partes.push(hp.ready ? ('Páginas: ' + (hp.mock ? 'modo exemplo' : (hp.provider || 'NVIDIA') + ' pronto')) : 'Páginas: NVIDIA_API_KEY pendente');
+        partes.push(hp.ready ? ('Páginas: ' + (hp.mock ? 'modo exemplo' : (hp.provider || 'openrouter') + ' pronto')) : 'Páginas: ' + providerKeyEnv() + ' pendente');
         partes.push(pr.ready ? ('Prospecção: ' + (pr.keyConfigured ? 'AIsa pronta' : 'modo exemplo')) : 'Prospecção: AISA_KEY pendente');
         hs.textContent = partes.join('  ·  ');
       }
@@ -145,7 +146,7 @@
         $('#healthBanner').hidden = false;
       } else if (!hp.ready || !pr.ready) {
         var msgs = [];
-        if (!hp.ready) msgs.push('<code>NVIDIA_API_KEY</code> (geração de páginas)');
+        if (!hp.ready) msgs.push('<code>' + providerKeyEnv() + '</code> (geração de páginas)');
         if (!pr.ready) msgs.push('<code>AISA_KEY</code> (prospecção)');
         $('#healthBannerText').innerHTML = 'Configuração pendente na Vercel: ' + msgs.join(' e ') + '. O resto funciona em modo de exemplo — <a href="#/config">ver integrações</a>.';
         $('#healthBanner').hidden = false;
@@ -156,6 +157,12 @@
     });
   }
   function safe(fn) { try { fn(); } catch (e) { if (window.console) console.warn('[pageforge]', e && e.message || e); } }
+  // nome da env var da chave do provider de geração ATIVO (lido de /api/health;
+  // não fica preso a "NVIDIA" — o provider pode ser openrouter, nvidia, etc.)
+  function providerKeyEnv() {
+    var name = (health && health.pages && health.pages.provider) || 'openrouter';
+    return String(name).toUpperCase().replace(/[^A-Z0-9]/g, '_') + '_API_KEY';
+  }
   function currentBase() { return '/' + ((location.hash.replace(/^#/, '') || '/').split('/').filter(Boolean)[0] || ''); }
   function currentParam() { return (location.hash.replace(/^#/, '') || '/').split('/').filter(Boolean)[1] || ''; }
 
@@ -270,7 +277,7 @@
     var b = state.brief;
     var el = $('#genPreflight');
     var notes = [];
-    if (!health || !health.pages || !health.pages.ready) notes.push(['err', 'NVIDIA_API_KEY não configurada — a geração vai falhar até a chave existir na Vercel.']);
+    if (!health || !health.pages || !health.pages.ready) notes.push(['err', providerKeyEnv() + ' não configurada — a geração vai falhar até a chave existir na Vercel.']);
     if (!b.checkoutUrl && !b.affiliateUrl) notes.push(['warn', 'Sem URL de checkout/afiliado: os CTAs vão para “#oferta” (pendência).']);
     if (b.affiliateUrl && b.affiliateUrl.indexOf('#') > -1) notes.push(['ok', 'Fragmento de afiliado (#…) será preservado nos CTAs.']);
     var sens = /sa[úu]de|emagre|suplement|ansiedade|renda|invest|cripto|aposta|relacion/i.test((b.niche || '') + (b.description || '') + (b.offer || ''));
@@ -330,7 +337,7 @@
         else if (f.t === 'done') doneFrame = f;
         else if (f.t === 'error') {
           var e = new Error(f.error || 'falha');
-          e.code = f.code; e.isConfig = (f.code === 'NVIDIA_KEY_MISSING'); e.retriable = f.retriable;
+          e.code = f.code; e.isConfig = (f.code === 'PROVIDER_KEY_MISSING'); e.retriable = f.retriable;
           fin(e);
         }
       }
@@ -423,7 +430,7 @@
       toast(msg + (f.qa ? '  ·  QA ' + f.qa.score + '/20' : '') + (f.design ? ' · Design ' + f.design.score + '/10' : ''));
     }
     function fail(err) {
-      if (err && err.isConfig) showFatal('Falta a NVIDIA_API_KEY', err.message, true);
+      if (err && err.isConfig) showFatal('Falta a ' + providerKeyEnv(), err.message, true);
       else showFatal('Não deu para gerar', (err && err.message) || 'Falha desconhecida na geração.', false);
     }
   }
@@ -431,7 +438,7 @@
   function showFatal(title, message, isConfig) {
     var v = $('#view-generating .gen');
     v.innerHTML = '<h2>' + escapeHtml(title) + '</h2><p class="muted" style="max-width:46ch;margin:0 auto 1.2rem">' + escapeHtml(message) + '</p>' +
-      (isConfig ? '<p class="tiny muted" style="max-width:46ch;margin:0 auto 1.2rem">Na Vercel: Project → Settings → Environment Variables → <code>NVIDIA_API_KEY</code> → Redeploy.</p>' : '') +
+      (isConfig ? '<p class="tiny muted" style="max-width:46ch;margin:0 auto 1.2rem">Na Vercel: Project → Settings → Environment Variables → <code>' + escapeHtml(providerKeyEnv()) + '</code> → Redeploy.</p>' : '') +
       '<div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap">' +
       (isConfig ? '' : '<button class="btn btn--primary btn--sm" id="genRetry">Tentar de novo</button>') +
       '<button class="btn btn--ghost btn--sm" id="genBack">Voltar ao briefing</button></div>';
@@ -456,11 +463,12 @@
     frame.srcdoc = g.html;
     $('#frameWrap').dataset.device = ui.device;
     $$('.pv-devices button').forEach(function (b) { b.classList.toggle('is-active', b.dataset.device === ui.device); });
-    $('#footModel').textContent = g.meta && g.meta.model ? ('NVIDIA · ' + g.meta.model) : 'NVIDIA';
+    var pvProv = (g.meta && g.meta.provider && g.meta.provider !== 'mock') ? g.meta.provider.toUpperCase() : ((health && health.pages && health.pages.provider) || 'openrouter').toUpperCase();
+    $('#footModel').textContent = g.meta && g.meta.model ? (pvProv + ' · ' + g.meta.model) : pvProv;
 
     var n = $('#notices'); n.innerHTML = '';
     var items = [];
-    if (g.meta && g.meta.model === 'mock') items.push(['info', 'Página de exemplo (MOCK). Configure a NVIDIA_API_KEY para gerar de verdade.']);
+    if (g.meta && g.meta.model === 'mock') items.push(['info', 'Página de exemplo (MOCK). Configure a ' + providerKeyEnv() + ' para gerar de verdade.']);
     (g.errors || []).forEach(function (e) { items.push(['err', e]); });
     (g.warnings || []).forEach(function (w) { items.push(['warn', w]); });
     if (!items.length) items.push(['ok', 'Nenhum aviso. Revise no preview antes de exportar.']);
@@ -582,7 +590,7 @@
   $('#btnApplyAi').addEventListener('click', function () {
     var instr = $('#editInstruction').value.trim();
     if (!instr) { toast('Escreva a instrução ou escolha um atalho.'); return; }
-    if (!health || !health.pages || !health.pages.ready) { toast('Precisa da NVIDIA_API_KEY para ajustar com IA.'); return; }
+    if (!health || !health.pages || !health.pages.ready) { toast('Precisa da ' + providerKeyEnv() + ' para ajustar com IA.'); return; }
     generate({ section: true, instruction: instr });
   });
   $('#btnRegen').addEventListener('click', function () {
