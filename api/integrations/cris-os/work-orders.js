@@ -17,7 +17,7 @@ import { putJob, getJob, jobsStoreConfigured } from '../../_lib/jobs-store.js';
 import { mapWorkOrderToBrief } from '../../_lib/cris-os-mapper.js';
 import { sanitizeBrief } from '../../_lib/sanitize.js';
 import { generatePageForBrief } from '../../_lib/pageforge-engine.js';
-import { putDemo, blobConfigured } from '../../_lib/blob.js';
+import { putDemo, putArtifactBackup, blobConfigured } from '../../_lib/blob.js';
 
 export const config = { maxDuration: 60 };
 
@@ -183,14 +183,24 @@ export default async function handler(req, res) {
   const checksum = createHash('sha256').update(gen.html, 'utf8').digest('hex');
   const artifact = { artifact_id: `artf_${pageId}`, artifact_type: assetType, page_id: pageId, version: '1', checksum };
 
-  const publish = { attempted: true };
+  // ---- BACKUP DO HTML ANTES de qualquer tentativa de publicação bonita ----
+  // Correção pós-incidente real: uma página inteira foi gerada e perdida
+  // para sempre porque só existia na memória desta função e a publicação
+  // (putDemo) falhou. Agora o HTML é preservado de forma durável PRIMEIRO
+  // -- mesmo que a publicação abaixo falhe de novo por qualquer motivo,
+  // o conteúdo real nunca mais é perdido (recuperável via artifact.file_ref).
+  const backup = await putArtifactBackup(workOrderId, gen.html);
+  if (backup && backup.blobUrl) artifact.file_ref = backup.blobUrl;
+
+  const publish = { attempted: true, backup: backup ? (backup.memory ? 'MEMORY' : 'PRESERVED') : 'BACKUP_FAILED' };
   try {
     const r = await putDemo(pageId, gen.html, job.title || projectId);
     artifact.preview_url = `${host(req)}/demo/${pageId}`;
     if (r.blobUrl) artifact.deployment_url = r.blobUrl;
     publish.status = r.memory ? 'MEMORY' : 'PUBLISHED';
   } catch (err) {
-    // não fabrica URL: sem publicação real, o artefato fica só com page_id/checksum.
+    // não fabrica URL: sem publicação real, o artefato fica só com page_id/
+    // checksum/file_ref -- mas o HTML em si já está preservado acima.
     publish.status = err.code || 'PUBLISH_FAILED';
     publish.message = String(err.message || err).slice(0, 300);
   }

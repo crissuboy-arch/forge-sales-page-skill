@@ -146,6 +146,13 @@ async function main() {
     // completo para quem chama esta API -- garante que o diagnóstico chega.
     chk(!!firstBody.meta, 'resposta expõe meta (provider/model/publish) -- diagnóstico de publicação nunca mais fica escondido');
     chk(!!(firstBody.meta && firstBody.meta.publish && firstBody.meta.publish.status), 'meta.publish.status presente -- permite saber se a publicação no Blob realmente funcionou');
+    // Correção pós-incidente real: o HTML agora é preservado (putArtifactBackup)
+    // ANTES da tentativa de publicação -- nunca mais some se putDemo falhar.
+    chk(!!(firstBody.meta && firstBody.meta.publish && firstBody.meta.publish.backup), 'meta.publish.backup presente -- HTML é preservado ANTES de tentar publicar');
+    // Em PAGEFORGE_MOCK=1 o backup vai para memória (sem URL real de Blob) --
+    // file_ref só é esperado com um Store de verdade configurado (produção).
+    const backupReal = firstBody.meta && firstBody.meta.publish && firstBody.meta.publish.backup === 'PRESERVED';
+    chk(!backupReal || !!(firstBody.artifact && firstBody.artifact.file_ref), 'artifact.file_ref presente quando o backup é real (Blob de verdade, não mock)');
     if (firstBody.artifact && firstBody.artifact.preview_url) {
       const pr = await fetch(firstBody.artifact.preview_url);
       const html = await pr.text();

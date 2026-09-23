@@ -82,6 +82,38 @@ export async function listDemos() {
     .map((b) => ({ slug: b.pathname.slice(PREFIX.length, -5), at: b.uploadedAt, url: b.url }));
 }
 
+// Backup DURÁVEL do HTML gerado (prefixo próprio, nunca sobrescreve/mistura
+// com demos/) -- gravado ANTES de qualquer tentativa de publicação bonita
+// (putDemo), para nunca mais repetir o incidente real onde uma página
+// inteira foi gerada e perdida para sempre por falha de publicação
+// (Store privado). Idempotente por natureza: mesma workOrderId sempre
+// sobrescreve o MESMO pathname determinístico -- nunca acumula lixo.
+const BACKUP_PREFIX = 'cris-os-artifacts/';
+
+/** Preserva o HTML de um artefato ANTES da publicação. @returns {{pathname, blobUrl}|null} nunca lança -- backup é rede de segurança, nunca bloqueia o fluxo principal. */
+export async function putArtifactBackup(workOrderId, html) {
+  if (useMem()) return { pathname: BACKUP_PREFIX + workOrderId + '.html', blobUrl: null, memory: true };
+  if (!blobConfigured()) return null;
+  const pathname = BACKUP_PREFIX + encodeURIComponent(workOrderId) + '.html';
+  try {
+    const res = await fetch(`${API}/${pathname}`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${token()}`,
+        'x-api-version': '7',
+        'x-content-type': 'text/html; charset=utf-8',
+        'x-add-random-suffix': '0',
+      },
+      body: String(html),
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => ({}));
+    return { pathname, blobUrl: data.url || null };
+  } catch {
+    return null; // backup nunca deve derrubar a geração/resposta principal
+  }
+}
+
 export async function deleteDemo(slug) {
   if (useMem()) { MEM.delete(slug); return true; }
   if (!blobConfigured()) return false;
