@@ -5,6 +5,7 @@
  * Roda offline. Uso: node scripts/app-selftest.mjs
  */
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { sanitizeBrief } from '../api/_lib/sanitize.js';
 import { buildKnowledgeCorpus } from '../api/_lib/knowledge.js';
 import { buildMessages, buildSectionMessages, buildPlanMessages, buildRenderMessages } from '../api/_lib/prompt.js';
@@ -20,9 +21,16 @@ import { buildProposal, buildEmailDraft, buildContract, gmailComposeUrl } from '
 import { normStatus, pushHistory } from '../api/_lib/prospect.js';
 
 let pass = 0;
+// Fila sequencial: alguns testes são async (mockam fetch/env globais — não
+// podem rodar em paralelo/entrelaçados, senão um teste pisa no estado do
+// outro). t() enfileira cada teste (síncrono ou async, mesma assinatura) e só
+// invoca fn() quando chega a vez dele; o runner aguarda a fila no final.
+let queue = Promise.resolve();
 const t = (name, fn) => {
-  try { fn(); pass++; console.log(`  ok  ${name}`); }
-  catch (e) { console.error(`  FAIL ${name}\n       ${e.message}`); process.exitCode = 1; }
+  queue = queue.then(() => fn()).then(
+    () => { pass++; console.log(`  ok  ${name}`); },
+    (e) => { console.error(`  FAIL ${name}\n       ${e.message}`); process.exitCode = 1; }
+  );
 };
 
 // ---------- sanitize ----------
@@ -335,6 +343,81 @@ t('openrouter: stream=true concatena os deltas SSE e devolve o conteúdo final',
   } finally { globalThis.fetch = origFetch; }
 });
 
+// ---------- provider-test (Etapa 12 — diagnóstico mínimo GET /api/provider-test) ----------
+function fakeRes() {
+  const r = { statusCode: 200, headers: {}, body: null };
+  r.setHeader = (k, v) => { r.headers[k] = v; };
+  r.end = (s) => { r.body = s; };
+  return r;
+}
+t('provider-test: com PAGEFORGE_MOCK=1 responde OPENROUTER_OK sem chamar a rede', async () => {
+  const prevMock = process.env.PAGEFORGE_MOCK; process.env.PAGEFORGE_MOCK = '1';
+  const origFetch = globalThis.fetch;
+  let fetchCalled = false;
+  globalThis.fetch = async () => { fetchCalled = true; throw new Error('não deveria chamar a rede em modo mock'); };
+  try {
+    const { default: handler } = await import(`${new URL('../api/provider-test.js', import.meta.url).href}?t=${Date.now()}`);
+    const res = fakeRes();
+    await handler({ method: 'GET', headers: {} }, res);
+    const j = JSON.parse(res.body);
+    assert.equal(res.statusCode, 200);
+    assert.equal(j.ok, true);
+    assert.equal(j.response, 'OPENROUTER_OK');
+    assert.equal(fetchCalled, false);
+  } finally { process.env.PAGEFORGE_MOCK = prevMock; globalThis.fetch = origFetch; }
+});
+t('provider-test: chamada real (mockada) usa poucos tokens, nunca expõe a chave, devolve OPENROUTER_OK', async () => {
+  const prevMock = process.env.PAGEFORGE_MOCK; process.env.PAGEFORGE_MOCK = '';
+  const prevKey = process.env.OPENROUTER_API_KEY; process.env.OPENROUTER_API_KEY = 'sk-or-fake-test-key-should-never-appear';
+  const origFetch = globalThis.fetch;
+  let captured = null;
+  globalThis.fetch = async (url, init) => {
+    captured = { url, headers: init.headers, body: JSON.parse(init.body) };
+    return { ok: true, json: async () => ({ model: 'openai/gpt-4o-mini', choices: [{ message: { content: 'OPENROUTER_OK' }, finish_reason: 'stop' }] }) };
+  };
+  try {
+    const { default: handler } = await import(`${new URL('../api/provider-test.js', import.meta.url).href}?t=${Date.now()}`);
+    const res = fakeRes();
+    await handler({ method: 'GET', headers: {} }, res);
+    const j = JSON.parse(res.body);
+    assert.equal(res.statusCode, 200);
+    assert.equal(j.ok, true);
+    assert.equal(j.provider, 'openrouter');
+    assert.equal(j.response, 'OPENROUTER_OK');
+    assert.ok(captured.body.max_tokens <= 32, `deve limitar fortemente os tokens: ${captured.body.max_tokens}`);
+    assert.ok(!res.body.includes('sk-or-fake-test-key-should-never-appear'), 'a chave NUNCA pode aparecer na resposta');
+    assert.ok(!JSON.stringify(res.headers).includes('sk-or-fake'), 'a chave NUNCA pode aparecer nos headers da resposta');
+  } finally { process.env.PAGEFORGE_MOCK = prevMock; process.env.OPENROUTER_API_KEY = prevKey; globalThis.fetch = origFetch; }
+});
+t('provider-test: sem OPENROUTER_API_KEY -> 503 estruturado, sem chamar a rede', async () => {
+  const prevMock = process.env.PAGEFORGE_MOCK; process.env.PAGEFORGE_MOCK = '';
+  const prevKey = process.env.OPENROUTER_API_KEY; process.env.OPENROUTER_API_KEY = '';
+  const origFetch = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = async () => { called = true; return { ok: true, json: async () => ({}) }; };
+  try {
+    const { default: handler } = await import(`${new URL('../api/provider-test.js', import.meta.url).href}?t=${Date.now()}`);
+    const res = fakeRes();
+    await handler({ method: 'GET', headers: {} }, res);
+    const j = JSON.parse(res.body);
+    assert.equal(res.statusCode, 503);
+    assert.equal(j.ok, false);
+    assert.equal(j.error.code, 'PROVIDER_KEY_MISSING');
+    assert.equal(called, false);
+  } finally { process.env.PAGEFORGE_MOCK = prevMock; process.env.OPENROUTER_API_KEY = prevKey; globalThis.fetch = origFetch; }
+});
+t('provider-test: método != GET é rejeitado', async () => {
+  const { default: handler } = await import(`${new URL('../api/provider-test.js', import.meta.url).href}?t=${Date.now()}`);
+  const res = fakeRes();
+  await handler({ method: 'POST', headers: {} }, res);
+  assert.equal(res.statusCode, 405);
+});
+t('provider-test: não importa o pipeline de geração nem o bridge do Cris OS (estático)', () => {
+  const src = fs.readFileSync(new URL('../api/provider-test.js', import.meta.url), 'utf8');
+  const importLines = src.split('\n').filter((l) => /^\s*import\b/.test(l)).join('\n');
+  assert.ok(!/pageforge-engine|prompt\.js|assemble\.js|jobs-store|cris-os/i.test(importLines), `não pode importar o pipeline de geração nem o bridge do Cris OS — imports: ${importLines}`);
+});
+
 // ---------- PROSPECÇÃO (Máquina de Leads integrada) ----------
 t('prospect: scoreLead — nota+avaliações+site+ig → score/temperatura', () => {
   const alto = scoreLead({ nota: 4.9, avaliacoes: 200, siteAntigo: 'https://x.pt', igAtivo: true, igSeguidores: 5000 });
@@ -483,4 +566,5 @@ t('blob: memória em modo mock (publica e recupera)', async () => {
   assert.ok((await listDemos()).some((d) => d.slug === 'teste-demo'));
 });
 
+await queue;
 console.log(`\n${process.exitCode ? 'FALHOU' : 'OK'} — ${pass} testes passaram.`);
