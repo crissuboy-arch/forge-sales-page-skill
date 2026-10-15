@@ -35,10 +35,10 @@ globalThis.fetch = async (url, opts) => {
 process.env.BLOB_READ_WRITE_TOKEN = 'test-dummy-token';
 process.env.PAGEFORGE_ATHENA_API_KEY = 'test-chave-123';
 
-const { verifyAthenaKey, athenaConfigured } = await import('../api/_lib/athena-auth.js');
-const { collectStats } = await import('../api/_lib/athena-stats.js');
-const healthHandler = (await import('../api/integrations/health.js')).default;
-const statsHandler = (await import('../api/integrations/stats.js')).default;
+const { verifyAthenaKey, athenaConfigured } = await import('../api/_lib/pf-auth.js');
+const { collectStats } = await import('../api/_lib/pf-stats.js');
+const athenaHandler = (await import('../api/athena.js')).default;
+
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -105,31 +105,31 @@ process.env.BLOB_READ_WRITE_TOKEN = 'test-dummy-token';
 console.log('== handlers HTTP ==');
 {
   const { res, body } = makeRes();
-  await healthHandler(req(), res);
+  await athenaHandler({ method: 'GET', headers: {}, url: '/api/athena?endpoint=health' }, res);
   check('GET /health -> 200', res.statusCode === 200);
   const b = body();
   check('health platform PageForge', b.platform === 'PageForge');
 }
 {
   const { res, body } = makeRes();
-  await statsHandler(req(), res);
+  await athenaHandler({ method: 'GET', headers: {}, url: '/api/athena?endpoint=stats' }, res);
   check('GET /stats sem chave -> 401', res.statusCode === 401);
 }
 {
   const { res } = makeRes();
-  await statsHandler(req({ authorization: 'Bearer errada' }), res);
+  await athenaHandler({ method: 'GET', headers: { authorization: 'Bearer errada' }, url: '/api/athena?endpoint=stats' }, res);
   check('GET /stats chave errada -> 401', res.statusCode === 401);
 }
 {
   const { res, body } = makeRes();
-  await statsHandler(req({ authorization: 'Bearer test-chave-123' }), res);
+  await athenaHandler({ method: 'GET', headers: { authorization: 'Bearer test-chave-123' }, url: '/api/athena?endpoint=stats' }, res);
   check('GET /stats com chave -> 200', res.statusCode === 200);
   check('stats ok:true', body().ok === true);
 }
 {
   delete process.env.PAGEFORGE_ATHENA_API_KEY;
   const { res } = makeRes();
-  await statsHandler(req({ authorization: 'Bearer test-chave-123' }), res);
+  await athenaHandler({ method: 'GET', headers: { authorization: 'Bearer test-chave-123' }, url: '/api/athena?endpoint=stats' }, res);
   check('GET /stats sem env no servidor -> 503', res.statusCode === 503);
   process.env.PAGEFORGE_ATHENA_API_KEY = 'test-chave-123';
 }

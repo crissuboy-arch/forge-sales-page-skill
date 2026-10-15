@@ -57,11 +57,17 @@ node scripts/test-athena-integration.mjs   # 36 testes, sem rede, sem credenciai
 
 ## Ficheiros
 
-- `api/_lib/athena-auth.js` — Bearer timing-safe (fail-closed).
-- `api/_lib/athena-stats.js` — agregados do Blob, isolamento por fonte,
+> **Nota de implementação:** UMA única função (`api/athena.js`) serve os dois
+> endpoints via rewrites no `vercel.json`. Motivo: o projeto está no limite de
+> funções serverless — adicionar 2+ funções quebra o build da Vercel
+> (confirmado por bissecção em 2026-10-15). As libs chamam-se `pf-auth.js`/
+> `pf-stats.js` (nomes com "athena" em `api/_lib/` também quebravam o build).
+
+- `api/_lib/pf-auth.js` — Bearer timing-safe (fail-closed).
+- `api/_lib/pf-stats.js` — agregados do Blob, isolamento por fonte,
   `null`s honestos quando o store não está configurado.
-- `api/integrations/health.js` — pública.
-- `api/integrations/stats.js` — protegida (`maxDuration: 30`).
+- `api/athena.js` — dispatcher único (via rewrites `/api/integrations/health` e `/api/integrations/stats`).
+- 
 
 Nada do motor de geração, do visual ou das integrações existentes foi alterado.
 
